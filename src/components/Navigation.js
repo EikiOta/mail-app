@@ -2,16 +2,20 @@
 import React from 'react';
 
 const Navigation = ({ currentPage, onPageChange }) => {
+  // ページ遷移時に画面上部にスクロール
+  const handlePageChange = (page, e) => {
+    e.preventDefault();
+    window.scrollTo(0, 0); // 画面上部にスクロール
+    onPageChange(page);
+  };
+
   return (
     <nav className="navbar">
       <div className="navbar-container">
         <a 
           href="#" 
           className="navbar-brand" 
-          onClick={(e) => {
-            e.preventDefault();
-            onPageChange('home');
-          }}
+          onClick={(e) => handlePageChange('home', e)}
         >
           メール一斉送信システム
         </a>
@@ -20,10 +24,7 @@ const Navigation = ({ currentPage, onPageChange }) => {
             <a 
               href="#" 
               className={`nav-link ${currentPage === 'home' ? 'active' : ''}`}
-              onClick={(e) => {
-                e.preventDefault();
-                onPageChange('home');
-              }}
+              onClick={(e) => handlePageChange('home', e)}
             >
               ホーム
             </a>
@@ -32,10 +33,7 @@ const Navigation = ({ currentPage, onPageChange }) => {
             <a 
               href="#" 
               className={`nav-link ${currentPage === 'mail-compose' ? 'active' : ''}`}
-              onClick={(e) => {
-                e.preventDefault();
-                onPageChange('mail-compose');
-              }}
+              onClick={(e) => handlePageChange('mail-compose', e)}
             >
               メール作成
             </a>
@@ -44,10 +42,7 @@ const Navigation = ({ currentPage, onPageChange }) => {
             <a 
               href="#" 
               className={`nav-link ${currentPage === 'settings' ? 'active' : ''}`}
-              onClick={(e) => {
-                e.preventDefault();
-                onPageChange('settings');
-              }}
+              onClick={(e) => handlePageChange('settings', e)}
             >
               設定
             </a>
@@ -56,10 +51,7 @@ const Navigation = ({ currentPage, onPageChange }) => {
             <a 
               href="#" 
               className={`nav-link ${currentPage === 'logs' ? 'active' : ''}`}
-              onClick={(e) => {
-                e.preventDefault();
-                onPageChange('logs');
-              }}
+              onClick={(e) => handlePageChange('logs', e)}
             >
               送信ログ
             </a>

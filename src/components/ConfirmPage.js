@@ -340,7 +340,7 @@ const ConfirmPage = ({
                 <th width="15%">会社名</th>
                 <th width="25%">挨拶文</th>
                 <th width="25%">CC</th>
-                <th width="15%">アクション</th>
+                <th width="15%">操作</th>
               </tr>
             </thead>
             <tbody>

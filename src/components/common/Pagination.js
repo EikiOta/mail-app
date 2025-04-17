@@ -8,10 +8,12 @@ const Pagination = ({ currentPage, totalItems, itemsPerPage, onPageChange }) => 
     return null;
   }
 
+  // ページ変更時に画面上部にスクロール
   const handlePageChange = (page) => {
     if (page < 1 || page > totalPages || page === currentPage) {
       return;
     }
+    window.scrollTo(0, 0); // 画面上部にスクロール
     onPageChange(page);
   };
 

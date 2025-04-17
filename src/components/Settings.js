@@ -44,6 +44,12 @@ const Settings = ({ recipients = [], lastImportDate, onImportSync }) => {
     }
   }, [recipients]);
 
+  // タブ切り替え時に画面上部にスクロール
+  const handleTabChange = (tab) => {
+    window.scrollTo(0, 0);
+    setActiveTab(tab);
+  };
+
   // テンプレート編集処理
   const handleEditTemplate = (template) => {
     setCurrentTemplate(template);
@@ -162,19 +168,19 @@ const Settings = ({ recipients = [], lastImportDate, onImportSync }) => {
         <ul className="tab-nav">
           <li 
             className={`tab-item ${activeTab === 'recipients-settings' ? 'active' : ''}`} 
-            onClick={() => setActiveTab('recipients-settings')}
+            onClick={() => handleTabChange('recipients-settings')}
           >
             宛先データ管理
           </li>
           <li 
             className={`tab-item ${activeTab === 'template-settings' ? 'active' : ''}`} 
-            onClick={() => setActiveTab('template-settings')}
+            onClick={() => handleTabChange('template-settings')}
           >
             テンプレート管理
           </li>
           <li 
             className={`tab-item ${activeTab === 'password-template' ? 'active' : ''}`} 
-            onClick={() => setActiveTab('password-template')}
+            onClick={() => handleTabChange('password-template')}
           >
             パスワード通知メール設定
           </li>

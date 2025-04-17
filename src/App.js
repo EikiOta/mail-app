@@ -92,15 +92,29 @@ function App() {
     ]);
   }, []);
 
+  // ページ遷移時の処理（画面トップに移動）
+  const handlePageChange = (page) => {
+    window.scrollTo(0, 0); // 画面上部にスクロール
+    setCurrentPage(page);
+  };
+
   // 送信確認ページへの遷移
   const handleConfirmation = (data) => {
+    window.scrollTo(0, 0); // 画面上部にスクロール
     setMailData(data);
-    setCurrentPage('confirm');
+    handlePageChange('confirm');
   };
 
   // 送信実行
   const executeSend = () => {
+    window.scrollTo(0, 0); // 画面上部にスクロール
     const selectedRecipients = recipientsMaster.filter(r => r.selected);
+    // 選択された受信者に圧縮設定を適用
+    const recipientsWithSettings = selectedRecipients.map(recipient => ({
+      ...recipient,
+      compressionSettings: mailData.compressionSettings
+    }));
+    
     // 送信処理をシミュレート（実際は送信されない）
     // 5%の確率でエラーが発生すると仮定
     let successCount = 0;
@@ -120,8 +134,17 @@ function App() {
       errorCount
     });
     
+    // 受信者の選択状態を更新（圧縮設定を含める）
+    setRecipientsMaster(prevState => 
+      prevState.map(recipient => 
+        recipient.selected 
+          ? {...recipient, compressionSettings: mailData.compressionSettings} 
+          : recipient
+      )
+    );
+    
     // 結果ページに遷移
-    setCurrentPage('result');
+    handlePageChange('result');
   };
 
   // 選択された受信者のリストを取得
@@ -149,6 +172,7 @@ function App() {
 
   // 新規メール作成
   const resetMailForm = () => {
+    window.scrollTo(0, 0); // 画面上部にスクロール
     setMailData({
       subject: '',
       content: '',
@@ -177,7 +201,7 @@ function App() {
   const renderPage = () => {
     switch (currentPage) {
       case 'home':
-        return <Dashboard logs={logs} onCompose={() => setCurrentPage('mail-compose')} lastImportDate={lastImportDate} onImportSync={handleImportSync} />;
+        return <Dashboard logs={logs} onCompose={() => handlePageChange('mail-compose')} lastImportDate={lastImportDate} onImportSync={handleImportSync} />;
       case 'mail-compose':
         return (
           <MailCompose 
@@ -194,7 +218,7 @@ function App() {
           <ConfirmPage 
             mailData={mailData}
             selectedRecipients={getSelectedRecipients()}
-            onBack={() => setCurrentPage('mail-compose')}
+            onBack={() => handlePageChange('mail-compose')}
             onSend={executeSend}
           />
         );
@@ -203,10 +227,10 @@ function App() {
           <ResultPage 
             result={sendResult}
             recipients={getSelectedRecipients()}
-            onHome={() => setCurrentPage('home')}
+            onHome={() => handlePageChange('home')}
             onNewMail={() => {
               resetMailForm();
-              setCurrentPage('mail-compose');
+              handlePageChange('mail-compose');
             }}
           />
         );
@@ -215,7 +239,7 @@ function App() {
       case 'logs':
         return <Logs logs={logs} />;
       default:
-        return <Dashboard logs={logs} onCompose={() => setCurrentPage('mail-compose')} lastImportDate={lastImportDate} onImportSync={handleImportSync} />;
+        return <Dashboard logs={logs} onCompose={() => handlePageChange('mail-compose')} lastImportDate={lastImportDate} onImportSync={handleImportSync} />;
     }
   };
 
@@ -223,7 +247,7 @@ function App() {
     <div className="app">
       <Navigation 
         currentPage={currentPage} 
-        onPageChange={setCurrentPage} 
+        onPageChange={handlePageChange}
       />
       <main className="main-content">
         {renderPage()}

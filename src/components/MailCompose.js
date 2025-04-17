@@ -38,6 +38,9 @@ const MailCompose = ({
   // 選択された受信者のみを取得
   const selectedRecipients = recipients.filter(r => r.selected);
 
+  // 添付ファイルがあるかどうか
+  const hasAttachments = attachments.length > 0;
+
   // テンプレート選択時の処理
   const handleTemplateChange = (e) => {
     const templateId = parseInt(e.target.value);
@@ -293,7 +296,7 @@ const MailCompose = ({
             <th width="10%">部署</th>
             <th width="10%">役職</th>
             <th width="25%">CC</th>
-            <th width="20%">アクション</th>
+            <th width="20%">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -626,7 +629,7 @@ const MailCompose = ({
               ))}
             </div>
             
-            <div className="compression-options">
+            <div className={`compression-options ${!hasAttachments ? 'disabled' : ''}`}>
               <h4>添付ファイルの設定</h4>
               <div className="radio-option-group">
                 <div className="radio-option">
@@ -637,6 +640,7 @@ const MailCompose = ({
                     value="password"
                     checked={compressionType === 'password'}
                     onChange={handleCompressionChange}
+                    disabled={!hasAttachments}
                   />
                   <label htmlFor="compress-password">ZIP圧縮してパスワードを設定（推奨）</label>
                 </div>
@@ -648,6 +652,7 @@ const MailCompose = ({
                     value="zip"
                     checked={compressionType === 'zip'}
                     onChange={handleCompressionChange}
+                    disabled={!hasAttachments}
                   />
                   <label htmlFor="compress-only">ZIP圧縮のみ（パスワードなし）</label>
                 </div>
@@ -659,12 +664,13 @@ const MailCompose = ({
                     value="none"
                     checked={compressionType === 'none'}
                     onChange={handleCompressionChange}
+                    disabled={!hasAttachments}
                   />
                   <label htmlFor="no-compress">圧縮しない</label>
                 </div>
               </div>
               
-              <div className={`form-section ${compressionType !== 'password' ? 'disabled' : ''}`} id="password-section">
+              <div className={`form-section ${compressionType !== 'password' || !hasAttachments ? 'disabled' : ''}`} id="password-section">
                 <label>パスワード</label>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <input 
@@ -672,20 +678,20 @@ const MailCompose = ({
                     id="attachment-password" 
                     defaultValue="a8Xp2Z" 
                     style={{ flex: 1 }}
-                    disabled={compressionType !== 'password'}
+                    disabled={compressionType !== 'password' || !hasAttachments}
                   />
                   <button 
                     className="action-btn" 
                     id="generate-password-btn"
                     onClick={generatePassword}
-                    disabled={compressionType !== 'password'}
+                    disabled={compressionType !== 'password' || !hasAttachments}
                   >
                     生成
                   </button>
                 </div>
               </div>
               
-              <div className={`form-section ${compressionType !== 'password' ? 'disabled' : ''}`} style={{ marginTop: '10px' }}>
+              <div className={`form-section ${compressionType !== 'password' || !hasAttachments ? 'disabled' : ''}`} style={{ marginTop: '10px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
                     <input 
@@ -693,7 +699,7 @@ const MailCompose = ({
                       id="send-password-email" 
                       defaultChecked 
                       style={{ marginRight: '10px', width: 'auto' }}
-                      disabled={compressionType !== 'password'}
+                      disabled={compressionType !== 'password' || !hasAttachments}
                     />
                     <label 
                       htmlFor="send-password-email" 
@@ -705,7 +711,7 @@ const MailCompose = ({
                   <button 
                     className="password-template-btn"
                     onClick={openPasswordTemplateModal}
-                    disabled={compressionType !== 'password'}
+                    disabled={compressionType !== 'password' || !hasAttachments}
                     style={{ 
                       fontSize: '12px', 
                       padding: '5px 10px', 

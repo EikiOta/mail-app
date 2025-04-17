@@ -4,9 +4,21 @@ import React from 'react';
 const ResultPage = ({ result, recipients, onHome, onNewMail }) => {
   const { totalCount, successCount, errorCount } = result;
   
-  // パスワード通知メールの結果を計算（実際のシステムではresultオブジェクトから取得する）
-  const passwordEmailCount = recipients.filter(r => r.compressionSettings?.sendPasswordEmail).length;
-  const passwordEmailSuccessCount = Math.floor(passwordEmailCount * 0.95); // デモ用：95%成功と仮定
+  // メールデータから圧縮設定やパスワード設定を取得
+  // 最初の受信者から設定情報を取得する
+  const compressionSettings = recipients.length > 0 && recipients[0].compressionSettings 
+    ? recipients[0].compressionSettings 
+    : { type: 'none', sendPasswordEmail: false };
+  
+  // パスワード通知メールの必要性をチェック
+  const needsPasswordEmails = compressionSettings.type === 'password' && compressionSettings.sendPasswordEmail;
+  
+  // パスワード通知メールの送信数を計算
+  const passwordEmailCount = needsPasswordEmails ? totalCount : 0;
+  
+  // 成功率と同じ比率でパスワードメールの成功/エラー数を計算
+  const successRate = totalCount > 0 ? successCount / totalCount : 0;
+  const passwordEmailSuccessCount = Math.round(passwordEmailCount * successRate);
   const passwordEmailErrorCount = passwordEmailCount - passwordEmailSuccessCount;
   
   // 総合の送信数（メール本文 + パスワード通知メール）
@@ -44,15 +56,11 @@ const ResultPage = ({ result, recipients, onHome, onNewMail }) => {
               second: '2-digit'
             }).replace(/\//g, '/');
             
-            // ランダムに成功かエラーかを決定（本文メール）
+            // 成功かエラーかを決定（本文メール）- 順序通りに表示
             const isSuccess = index < successCount;
             
-            // ランダムに成功かエラーかを決定（パスワード通知メール）
-            const needsPasswordEmail = recipient.compressionSettings?.sendPasswordEmail || Math.random() > 0.5; // デモ用
-            const passwordEmailSuccess = needsPasswordEmail && Math.random() > 0.05; // 95%の確率で成功
-            
             return (
-              <tr key={recipient.id}>
+              <tr key={recipient.id || index}>
                 <td>{index + 1}</td>
                 <td>{recipient.name}</td>
                 <td>{recipient.company}</td>
@@ -62,9 +70,9 @@ const ResultPage = ({ result, recipients, onHome, onNewMail }) => {
                   </span>
                 </td>
                 <td>
-                  {needsPasswordEmail ? (
-                    <span className={`status-badge ${passwordEmailSuccess ? 'success' : 'error'}`}>
-                      {passwordEmailSuccess ? '成功' : 'エラー'}
+                  {needsPasswordEmails ? (
+                    <span className={`status-badge ${isSuccess ? 'success' : 'error'}`}>
+                      {isSuccess ? '成功' : 'エラー'}
                     </span>
                   ) : (
                     <span className="status-badge" style={{ backgroundColor: '#f8f9fa', color: '#6c757d' }}>

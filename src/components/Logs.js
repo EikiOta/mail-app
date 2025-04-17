@@ -16,53 +16,34 @@ const Logs = ({ logs }) => {
   const [activeDetailTab, setActiveDetailTab] = useState('summary-tab');
   const itemsPerPage = 10;
 
-  // ダミーの送信先データ（実際のシステムではログと一緒に保存されるはず）
-  const dummyRecipients = [
-    {
-      id: 1,
-      name: '佐藤 翔太',
-      company: '富士通株式会社',
-      department: 'システムインテグレーション事業部',
-      position: '部長',
-      email: 'sato.shota@fujitsu.co.jp',
-      cc: [
-        { id: 101, name: '山本 健二', email: 'yamamoto.kenji@fujitsu.co.jp' },
-        { id: 102, name: '田中 裕子', email: 'tanaka.yuko@fujitsu.co.jp' }
-      ],
-      status: 'success',
-      passwordStatus: 'success',
-      sentTime: '2025/04/15 15:30:12',
-      greeting: '富士通株式会社 佐藤 翔太様\n\n'
-    },
-    {
-      id: 2,
-      name: '鈴木 健太',
-      company: 'トヨタ自動車株式会社',
-      department: '開発部',
-      position: '課長',
-      email: 'suzuki.kenta@toyota.co.jp',
-      cc: [
-        { id: 103, name: '渡辺 浩', email: 'watanabe.hiroshi@toyota.co.jp' }
-      ],
-      status: 'success',
-      passwordStatus: 'success',
-      sentTime: '2025/04/15 15:30:15',
-      greeting: 'トヨタ自動車株式会社 鈴木 健太様\n\n'
-    },
-    {
-      id: 3,
-      name: '高橋 大輔',
-      company: '株式会社日立製作所',
-      department: '営業本部 関西支社 名古屋支店',
-      position: '主任',
-      email: 'takahashi.daisuke@hitachi.co.jp',
-      cc: [],
-      status: 'success',
-      passwordStatus: 'error',
-      sentTime: '2025/04/15 15:30:18',
-      greeting: '株式会社日立製作所 高橋 大輔様\n\n'
+  // ログに応じたダミーの送信先データ
+  const getDummyRecipientsForLog = (log) => {
+    const recipients = [];
+    
+    for (let i = 0; i < log.totalCount; i++) {
+      // 成功/エラー状態を決定（logのsuccessCountに基づく）
+      const isSuccess = i < log.successCount;
+      const passwordStatus = i < log.passwordEmailSuccess ? 'success' : 'error';
+      
+      recipients.push({
+        id: i + 1,
+        name: `宛先${i + 1}`,
+        company: `会社${Math.floor(i/3) + 1}`,
+        department: `部署${i % 5 + 1}`,
+        position: `役職${i % 4 + 1}`,
+        email: `recipient${i + 1}@example.com`,
+        cc: i % 3 === 0 ? [
+          { id: 1001 + i, name: `CC担当者${i + 1}`, email: `cc${i + 1}@example.com` }
+        ] : [],
+        status: isSuccess ? 'success' : 'error',
+        passwordStatus: log.passwordEmailSuccess > 0 ? passwordStatus : 'none',
+        sentTime: log.date.replace(/(\d+:\d+)$/, (i % 60).toString().padStart(2, '0') + ':' + Math.floor(Math.random() * 60).toString().padStart(2, '0')),
+        greeting: `会社${Math.floor(i/3) + 1} 宛先${i + 1}様\n\n`
+      });
     }
-  ];
+    
+    return recipients;
+  };
 
   // フィルター変更時の処理
   const handleFilterChange = (e) => {
@@ -166,6 +147,9 @@ const Logs = ({ logs }) => {
   // ログ詳細モーダルの内容をレンダリング
   const renderLogDetailModal = () => {
     if (!currentLog) return null;
+    
+    // 現在のログに対応するダミーの受信者リストを生成
+    const dummyRecipients = getDummyRecipientsForLog(currentLog);
     
     return (
       <Modal onClose={() => setShowLogDetailModal(false)} fullWidth={true} maxWidth="90%">
@@ -277,7 +261,7 @@ const Logs = ({ logs }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {dummyRecipients.map((recipient, index) => (
+                  {dummyRecipients.slice(0, 10).map((recipient, index) => (
                     <tr key={recipient.id}>
                       <td>{index + 1}</td>
                       <td>{recipient.name}</td>
@@ -303,9 +287,15 @@ const Logs = ({ logs }) => {
                         </span>
                       </td>
                       <td>
-                        <span className={`status-badge ${recipient.passwordStatus}`}>
-                          {recipient.passwordStatus === 'success' ? '成功' : 'エラー'}
-                        </span>
+                        {recipient.passwordStatus !== 'none' ? (
+                          <span className={`status-badge ${recipient.passwordStatus}`}>
+                            {recipient.passwordStatus === 'success' ? '成功' : 'エラー'}
+                          </span>
+                        ) : (
+                          <span className="status-badge" style={{ backgroundColor: '#f8f9fa', color: '#6c757d' }}>
+                            なし
+                          </span>
+                        )}
                       </td>
                       <td>{recipient.sentTime}</td>
                     </tr>
@@ -394,7 +384,7 @@ const Logs = ({ logs }) => {
             <th width="15%">送信数</th>
             <th width="10%">成功</th>
             <th width="10%">失敗</th>
-            <th width="15%">アクション</th>
+            <th width="15%">操作</th>
           </tr>
         </thead>
         <tbody>
