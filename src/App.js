@@ -30,6 +30,9 @@ function App() {
     errorCount: 0
   });
 
+  // 顧客管理リスト最終同期日時
+  const [lastImportDate, setLastImportDate] = useState('2025/04/10 15:30');
+
   // 初期化
   useEffect(() => {
     // 30件のダミーデータを生成
@@ -46,7 +49,9 @@ function App() {
         successCount: 25,
         errorCount: 0,
         status: 'success',
-        templateId: 1
+        templateId: 1,
+        passwordEmailSuccess: 25, // パスワード通知メール成功数を追加
+        passwordEmailError: 0     // パスワード通知メールエラー数を追加
       },
       {
         id: 2,
@@ -56,7 +61,9 @@ function App() {
         successCount: 42,
         errorCount: 0,
         status: 'success',
-        templateId: 2
+        templateId: 2,
+        passwordEmailSuccess: 42,
+        passwordEmailError: 0
       },
       {
         id: 3,
@@ -66,7 +73,9 @@ function App() {
         successCount: 18,
         errorCount: 0,
         status: 'success',
-        templateId: 1
+        templateId: 1,
+        passwordEmailSuccess: 18,
+        passwordEmailError: 0
       },
       {
         id: 4,
@@ -76,7 +85,9 @@ function App() {
         successCount: 12,
         errorCount: 3,
         status: 'error',
-        templateId: 2
+        templateId: 2,
+        passwordEmailSuccess: 10,
+        passwordEmailError: 5
       }
     ]);
   }, []);
@@ -154,11 +165,19 @@ function App() {
     );
   };
 
+  // 顧客管理リストの同期処理シミュレーション
+  const handleImportSync = () => {
+    // 同期日時を更新
+    const now = new Date();
+    const formattedDate = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    setLastImportDate(formattedDate);
+  };
+
   // ページに応じてコンポーネントを表示
   const renderPage = () => {
     switch (currentPage) {
       case 'home':
-        return <Dashboard logs={logs} onCompose={() => setCurrentPage('mail-compose')} />;
+        return <Dashboard logs={logs} onCompose={() => setCurrentPage('mail-compose')} lastImportDate={lastImportDate} onImportSync={handleImportSync} />;
       case 'mail-compose':
         return (
           <MailCompose 
@@ -192,11 +211,11 @@ function App() {
           />
         );
       case 'settings':
-        return <Settings recipients={recipientsMaster} />;
+        return <Settings recipients={recipientsMaster} lastImportDate={lastImportDate} onImportSync={handleImportSync} />;
       case 'logs':
         return <Logs logs={logs} />;
       default:
-        return <Dashboard logs={logs} onCompose={() => setCurrentPage('mail-compose')} />;
+        return <Dashboard logs={logs} onCompose={() => setCurrentPage('mail-compose')} lastImportDate={lastImportDate} onImportSync={handleImportSync} />;
     }
   };
 

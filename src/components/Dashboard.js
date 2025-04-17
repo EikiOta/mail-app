@@ -2,13 +2,15 @@
 import React, { useState } from 'react';
 import { Modal } from './common/Modal';
 
-const Dashboard = ({ logs, onCompose }) => {
+const Dashboard = ({ logs, onCompose, lastImportDate, onImportSync }) => {
   // 最新の4件のログのみ表示
   const recentLogs = logs.slice(0, 4);
   const [showLogDetailModal, setShowLogDetailModal] = useState(false);
   const [currentLog, setCurrentLog] = useState(null);
   const [activeDetailTab, setActiveDetailTab] = useState('summary-tab');
-  const [showPasswordEmailModal, setShowPasswordEmailModal] = useState(false);
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncComplete, setSyncComplete] = useState(false);
 
   // ダミーの送信先データ（実際のシステムではログと一緒に保存されるはず）
   const dummyRecipients = [
@@ -24,6 +26,7 @@ const Dashboard = ({ logs, onCompose }) => {
         { id: 102, name: '田中 裕子', email: 'tanaka.yuko@fujitsu.co.jp' }
       ],
       status: 'success',
+      passwordStatus: 'success',
       sentTime: '2025/04/15 15:30:12',
       greeting: '富士通株式会社 佐藤 翔太様\n\n'
     },
@@ -38,6 +41,7 @@ const Dashboard = ({ logs, onCompose }) => {
         { id: 103, name: '渡辺 浩', email: 'watanabe.hiroshi@toyota.co.jp' }
       ],
       status: 'success',
+      passwordStatus: 'success',
       sentTime: '2025/04/15 15:30:15',
       greeting: 'トヨタ自動車株式会社 鈴木 健太様\n\n'
     },
@@ -50,32 +54,51 @@ const Dashboard = ({ logs, onCompose }) => {
       email: 'takahashi.daisuke@hitachi.co.jp',
       cc: [],
       status: 'success',
+      passwordStatus: 'success',
       sentTime: '2025/04/15 15:30:18',
       greeting: '株式会社日立製作所 高橋 大輔様\n\n'
     }
   ];
 
-  // パスワード通知メールのテンプレート
-  const passwordEmailTemplate = `<<会社名>> <<宛先名>>様
+  // 同期処理を実行（デモ用）
+  const executeSync = () => {
+    setSyncing(true);
+    
+    // 同期処理をシミュレート（2秒後に完了）
+    setTimeout(() => {
+      setSyncing(false);
+      setSyncComplete(true);
+      
+      // 同期完了時にApp.jsの同期日時を更新
+      if (onImportSync) {
+        onImportSync();
+      }
+      
+      // 完了後3秒でモーダルを閉じる
+      setTimeout(() => {
+        setShowSyncModal(false);
+      }, 3000);
+    }, 2000);
+  };
 
-いつもお世話になっております。KOKUAの天野です。
+  // ファイル選択ダイアログを開く
+  const openFileDialog = () => {
+    // 実際のファイル選択アクションを実行せず、ダミー処理のみ実行
+    executeSync();
+  };
 
-先ほど送信いたしましたファイルのパスワードをお知らせいたします。
-パスワード: <<パスワード>>
-
-ご不明点がございましたら、お気軽にお問い合わせください。
-よろしくお願いいたします。`;
+  // 顧客管理リストとの同期ダイアログを開く
+  const openSyncDialog = () => {
+    setShowSyncModal(true);
+    setSyncing(false);
+    setSyncComplete(false);
+  };
 
   // ログ詳細を開く
   const openLogDetail = (log) => {
     setCurrentLog(log);
     setActiveDetailTab('summary-tab');
     setShowLogDetailModal(true);
-  };
-
-  // パスワード通知メールモーダルを開く
-  const openPasswordEmailModal = () => {
-    setShowPasswordEmailModal(true);
   };
 
   // 詳細タブの切り替え
@@ -94,14 +117,7 @@ const Dashboard = ({ logs, onCompose }) => {
         </div>
         
         <div style={{ marginTop: '10px', fontSize: '14px', color: '#666' }}>
-          <strong>設定:</strong> ZIP圧縮してパスワードを設定（パスワード: a8Xp2#7Z）
-          <button 
-            className="password-email-btn" 
-            onClick={openPasswordEmailModal}
-            style={{ marginLeft: '10px', fontSize: '12px', padding: '2px 8px' }}
-          >
-            パスワード通知メール確認
-          </button>
+          <strong>設定:</strong> ZIP圧縮してパスワードを設定（パスワード: a8Xp2Z）
         </div>
       </div>
     );
@@ -112,7 +128,7 @@ const Dashboard = ({ logs, onCompose }) => {
     if (!currentLog) return null;
     
     return (
-      <Modal onClose={() => setShowLogDetailModal(false)} fullWidth={true}>
+      <Modal onClose={() => setShowLogDetailModal(false)} fullWidth={true} maxWidth="90%">
         <div className="modal-header">
           <h3 className="modal-title">送信ログ詳細</h3>
         </div>
@@ -155,7 +171,7 @@ const Dashboard = ({ logs, onCompose }) => {
                 </div>
                 <div style={{ flex: '1', minWidth: '200px' }}>
                   <div style={{ marginBottom: '10px' }}>
-                    <div style={{ fontSize: '14px', color: '#6c757d', marginBottom: '5px' }}>送信数</div>
+                    <div style={{ fontSize: '14px', color: '#6c757d', marginBottom: '5px' }}>メール送信</div>
                     <div style={{ display: 'flex', gap: '10px' }}>
                       <div>
                         <span style={{ fontWeight: 'bold', fontSize: '18px' }}>{currentLog.totalCount}</span>
@@ -167,6 +183,20 @@ const Dashboard = ({ logs, onCompose }) => {
                       </div>
                       <div>
                         <span style={{ fontWeight: 'bold', fontSize: '18px', color: '#e74c3c' }}>{currentLog.errorCount}</span>
+                        <span style={{ fontSize: '14px', color: '#6c757d', marginLeft: '5px' }}>失敗</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div style={{ marginBottom: '10px' }}>
+                    <div style={{ fontSize: '14px', color: '#6c757d', marginBottom: '5px' }}>パスワード通知</div>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <div>
+                        <span style={{ fontWeight: 'bold', fontSize: '18px', color: '#27ae60' }}>{currentLog.passwordEmailSuccess}</span>
+                        <span style={{ fontSize: '14px', color: '#6c757d', marginLeft: '5px' }}>成功</span>
+                      </div>
+                      <div>
+                        <span style={{ fontWeight: 'bold', fontSize: '18px', color: '#e74c3c' }}>{currentLog.passwordEmailError}</span>
                         <span style={{ fontSize: '14px', color: '#6c757d', marginLeft: '5px' }}>失敗</span>
                       </div>
                     </div>
@@ -190,53 +220,59 @@ const Dashboard = ({ logs, onCompose }) => {
           
           {/* 送信先リストタブ */}
           <div className={`log-detail-pane ${activeDetailTab === 'recipients-tab' ? 'active' : ''}`} id="recipients-tab">
-            <table className="recipients-table wide-table">
-              <thead>
-                <tr>
-                  <th style={{ width: '40px' }}>No</th>
-                  <th>送信先情報</th>
-                  <th>CC</th>
-                  <th style={{ width: '80px' }}>ステータス</th>
-                  <th style={{ width: '100px' }}>送信日時</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dummyRecipients.map((recipient, index) => (
-                  <tr key={recipient.id}>
-                    <td>{index + 1}</td>
-                    <td>
-                      <div className="recipient-info">
-                        <div className="recipient-name">{recipient.name}</div>
-                        <div className="recipient-company">{recipient.company}</div>
-                        <div className="recipient-details">
-                          <span className="detail-label">部署:</span> {recipient.department} 
-                          <span className="detail-label" style={{ marginLeft: '10px' }}>役職:</span> {recipient.position}
-                        </div>
-                        <div className="recipient-email">{recipient.email}</div>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="cc-tags">
-                        {recipient.cc.map((cc, ccIndex) => (
-                          <span key={ccIndex} className="cc-tag">
-                            {cc.name}
-                          </span>
-                        ))}
-                        {recipient.cc.length === 0 && (
-                          <span className="no-cc">なし</span>
-                        )}
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`status-badge ${recipient.status}`}>
-                        {recipient.status === 'success' ? '成功' : 'エラー'}
-                      </span>
-                    </td>
-                    <td>{recipient.sentTime}</td>
+            <div className="recipients-table-container">
+              <table className="recipients-table" style={{ width: '100%' }}>
+                <thead>
+                  <tr>
+                    <th style={{ width: '3%' }}>No</th>
+                    <th style={{ width: '10%' }}>名前</th>
+                    <th style={{ width: '15%' }}>会社名</th>
+                    <th style={{ width: '15%' }}>部署</th>
+                    <th style={{ width: '7%' }}>役職</th>
+                    <th style={{ width: '15%' }}>メールアドレス</th>
+                    <th style={{ width: '15%' }}>CC</th>
+                    <th style={{ width: '7%' }}>本文メール</th>
+                    <th style={{ width: '7%' }}>パスワードメール</th>
+                    <th style={{ width: '6%' }}>送信日時</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {dummyRecipients.map((recipient, index) => (
+                    <tr key={recipient.id}>
+                      <td>{index + 1}</td>
+                      <td>{recipient.name}</td>
+                      <td>{recipient.company}</td>
+                      <td>{recipient.department}</td>
+                      <td>{recipient.position}</td>
+                      <td>{recipient.email}</td>
+                      <td>
+                        <div className="cc-tags">
+                          {recipient.cc.map((cc, ccIndex) => (
+                            <span key={ccIndex} className="cc-tag">
+                              {cc.name}
+                            </span>
+                          ))}
+                          {recipient.cc.length === 0 && (
+                            <span className="no-cc">なし</span>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`status-badge ${recipient.status}`}>
+                          {recipient.status === 'success' ? '成功' : 'エラー'}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`status-badge ${recipient.passwordStatus}`}>
+                          {recipient.passwordStatus === 'success' ? '成功' : 'エラー'}
+                        </span>
+                      </td>
+                      <td>{recipient.sentTime}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
         
@@ -247,38 +283,70 @@ const Dashboard = ({ logs, onCompose }) => {
     );
   };
 
-  // パスワード通知メールモーダルの内容をレンダリング
-  const renderPasswordEmailModal = () => {
+  // 顧客管理リスト同期モーダルの内容をレンダリング
+  const renderSyncModal = () => {
     return (
-      <Modal onClose={() => setShowPasswordEmailModal(false)}>
+      <Modal onClose={() => !syncing && setShowSyncModal(false)}>
         <div className="modal-header">
-          <h3 className="modal-title">パスワード通知メール</h3>
+          <h3 className="modal-title">顧客管理リストと同期</h3>
         </div>
         
         <div className="modal-body">
-          <p>以下のパスワード通知メールが各宛先に別途送信されました：</p>
-          <div className="email-preview" style={{ 
-            whiteSpace: 'pre-line',
-            backgroundColor: '#f9f9f9',
-            padding: '15px',
-            borderRadius: '4px',
-            border: '1px solid #e0e0e0',
-            marginTop: '10px',
-            marginBottom: '15px'
-          }}>
-            {passwordEmailTemplate
-              .replace('<<会社名>>', '富士通株式会社')
-              .replace('<<宛先名>>', '佐藤 翔太')
-              .replace('<<パスワード>>', 'a8Xp2#7Z')}
-          </div>
-          <p style={{ color: '#666', fontSize: '14px' }}>
-            ※ このパスワード通知メールは、メール送信時に「パスワードを別メールで送信する」が選択された場合に自動的に送信されます。<br />
-            ※ テンプレートは「設定」→「テンプレート管理」から編集できます。
-          </p>
+          {!syncing && !syncComplete ? (
+            <div>
+              <p>顧客管理用のExcelファイル（.xlsx）を選択してください。</p>
+              <p style={{ color: '#666', fontSize: '14px', marginTop: '10px' }}>
+                ※ 同期すると現在の宛先データは上書きされます。必ず最新の顧客管理リストを選択してください。
+              </p>
+              <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
+                <button 
+                  className="action-btn"
+                  onClick={openFileDialog}
+                >
+                  ファイルを選択
+                </button>
+              </div>
+            </div>
+          ) : syncing ? (
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '20px', marginBottom: '20px' }}>同期中...</div>
+              <div className="sync-progress-container" style={{ 
+                height: '10px',
+                backgroundColor: '#e0e0e0',
+                borderRadius: '5px',
+                overflow: 'hidden',
+                marginBottom: '20px'
+              }}>
+                <div className="sync-progress" style={{
+                  width: '70%',
+                  height: '100%',
+                  backgroundColor: '#3498db',
+                  animation: 'progress-animation 2s infinite',
+                  backgroundImage: 'linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent)',
+                  backgroundSize: '1rem 1rem'
+                }}></div>
+              </div>
+              <p>顧客管理リストのデータを取り込んでいます...</p>
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '24px', color: '#27ae60', marginBottom: '20px' }}>✓</div>
+              <div style={{ fontSize: '20px', marginBottom: '10px' }}>同期完了</div>
+              <p>顧客管理リストのデータを取り込みました。</p>
+              <p style={{ marginTop: '10px' }}>取り込み件数: 30件</p>
+            </div>
+          )}
         </div>
         
         <div className="modal-footer">
-          <button className="action-btn" onClick={() => setShowPasswordEmailModal(false)}>閉じる</button>
+          {!syncing && (
+            <button 
+              className="cancel-btn"
+              onClick={() => setShowSyncModal(false)}
+            >
+              閉じる
+            </button>
+          )}
         </div>
       </Modal>
     );
@@ -300,7 +368,19 @@ const Dashboard = ({ logs, onCompose }) => {
           <div className="icon">👥</div>
           <h3>宛先データ</h3>
           <div className="count">30</div>
-          <div className="description">登録済み宛先</div>
+          <div className="description">
+            登録済み宛先
+            <div style={{ fontSize: '12px', marginTop: '8px', color: '#666' }}>
+              最終同期: {lastImportDate}
+            </div>
+            <button 
+              className="action-btn" 
+              style={{ fontSize: '12px', padding: '3px 10px', marginTop: '5px' }}
+              onClick={openSyncDialog}
+            >
+              顧客管理リストと同期
+            </button>
+          </div>
         </div>
         
         <div className="dashboard-card">
@@ -349,9 +429,9 @@ const Dashboard = ({ logs, onCompose }) => {
 
       {/* ログ詳細モーダル */}
       {showLogDetailModal && renderLogDetailModal()}
-      
-      {/* パスワード通知メールモーダル */}
-      {showPasswordEmailModal && renderPasswordEmailModal()}
+
+      {/* 顧客管理リスト同期モーダル */}
+      {showSyncModal && renderSyncModal()}
     </div>
   );
 };

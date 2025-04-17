@@ -25,7 +25,7 @@ const MailCompose = ({
   const [passwordEmailTemplate, setPasswordEmailTemplate] = useState(
     `<<会社名>> <<宛先名>>様
 
-いつもお世話になっております。KOKUAの天野です。
+いつもお世話になっております。xxxのyyyです。
 
 先ほど送信いたしましたファイルのパスワードをお知らせいたします。
 パスワード: <<パスワード>>
@@ -144,8 +144,8 @@ const MailCompose = ({
     const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
     let password = '';
     
-    // 8-12文字のランダムパスワードを生成
-    const length = Math.floor(Math.random() * 5) + 8; // 8-12文字
+    // 6文字のランダムパスワードを生成
+    const length = 6;
     
     for (let i = 0; i < length; i++) {
       const randomIndex = Math.floor(Math.random() * charset.length);
@@ -166,11 +166,11 @@ const MailCompose = ({
 
   // パスワード通知メールのプレビュー表示
   const renderPasswordEmailPreview = () => {
-    // サンプルでの置換
+    // プレビュー例での置換
     return passwordEmailTemplate
-      .replace('<<会社名>>', '富士通株式会社')
-      .replace('<<宛先名>>', '佐藤 翔太')
-      .replace('<<パスワード>>', document.getElementById('attachment-password')?.value || 'a8Xp2#7Z');
+      .replace('<<会社名>>', '株式会社サンプル')
+      .replace('<<宛先名>>', '山田 太郎')
+      .replace('<<パスワード>>', document.getElementById('attachment-password')?.value || 'a8Xp2Z');
   };
 
   // 送信確認ボタンクリック時の処理
@@ -528,7 +528,7 @@ const MailCompose = ({
           </div>
           
           <div style={{ marginTop: '20px' }}>
-            <h4>プレビュー</h4>
+            <h4>プレビュー例</h4>
             <div className="email-preview" style={{ 
               whiteSpace: 'pre-line',
               backgroundColor: '#f9f9f9',
@@ -670,7 +670,7 @@ const MailCompose = ({
                   <input 
                     type="text" 
                     id="attachment-password" 
-                    defaultValue="a8Xp2#7Z" 
+                    defaultValue="a8Xp2Z" 
                     style={{ flex: 1 }}
                     disabled={compressionType !== 'password'}
                   />
@@ -706,8 +706,20 @@ const MailCompose = ({
                     className="password-template-btn"
                     onClick={openPasswordTemplateModal}
                     disabled={compressionType !== 'password'}
-                    style={{ fontSize: '12px', padding: '5px 10px' }}
+                    style={{ 
+                      fontSize: '12px', 
+                      padding: '5px 10px', 
+                      backgroundColor: '#f0f8ff', 
+                      border: '1px solid #3498db',
+                      borderRadius: '4px',
+                      color: '#2980b9', 
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px'
+                    }}
                   >
+                    <span style={{ fontSize: '14px' }}>✉️</span>
                     通知メールテンプレート編集
                   </button>
                 </div>

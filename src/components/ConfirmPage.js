@@ -14,6 +14,7 @@ const ConfirmPage = ({
   const [recipientGreetings, setRecipientGreetings] = useState({});
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [previewRecipient, setPreviewRecipient] = useState(null);
+  const [showPasswordEmailPreview, setShowPasswordEmailPreview] = useState(false);
 
   // コンポーネントがマウントされた時に、各宛先ごとの挨拶文を初期化
   useEffect(() => {
@@ -72,6 +73,21 @@ const ConfirmPage = ({
     setPreviewModalOpen(true);
   };
 
+  // パスワード通知メールプレビューを表示
+  const getPasswordEmailContent = (recipient) => {
+    if (!mailData.compressionSettings || 
+        mailData.compressionSettings.type !== 'password' || 
+        !mailData.compressionSettings.sendPasswordEmail) {
+      return null;
+    }
+    
+    let template = mailData.compressionSettings.passwordEmailTemplate || '';
+    return template
+      .replace('<<会社名>>', recipient.company)
+      .replace('<<宛先名>>', recipient.name)
+      .replace('<<パスワード>>', mailData.compressionSettings.password || 'a8Xp2Z');
+  };
+
   // 添付ファイル情報の表示
   const renderAttachmentInfo = () => {
     if (!mailData.attachments || mailData.attachments.length === 0) {
@@ -92,7 +108,7 @@ const ConfirmPage = ({
         compressionSettingText = '圧縮なし';
       }
     } else {
-      compressionSettingText = 'ZIP圧縮してパスワードを設定（自動生成されたパスワード: a8Xp2#7Z）';
+      compressionSettingText = 'ZIP圧縮してパスワードを設定（自動生成されたパスワード: a8Xp2Z）';
     }
     
     return (
@@ -146,6 +162,7 @@ const ConfirmPage = ({
     if (!previewRecipient) return null;
     
     const greeting = recipientGreetings[previewRecipient.id] || '';
+    const passwordEmailContent = getPasswordEmailContent(previewRecipient);
     
     return (
       <Modal onClose={() => setPreviewModalOpen(false)}>
@@ -187,6 +204,22 @@ const ConfirmPage = ({
               </div>
             </div>
           )}
+
+          {passwordEmailContent && (
+            <div className="confirmation-section">
+              <div className="confirmation-label">パスワード通知メール</div>
+              <div className="confirmation-value" style={{ 
+                whiteSpace: 'pre-line', 
+                backgroundColor: '#f9f9f9',
+                padding: '15px',
+                borderRadius: '4px',
+                border: '1px solid #e0e0e0', 
+                color: '#333'
+              }}>
+                {passwordEmailContent}
+              </div>
+            </div>
+          )}
         </div>
         
         <div className="modal-footer">
@@ -195,6 +228,57 @@ const ConfirmPage = ({
       </Modal>
     );
   };
+
+  // パスワード通知メールをプレビュー表示するモーダル
+  const renderPasswordEmailPreviewModal = () => {
+    if (!mailData.compressionSettings || 
+        mailData.compressionSettings.type !== 'password' || 
+        !mailData.compressionSettings.sendPasswordEmail) {
+      return null;
+    }
+
+    // サンプル宛先を使ってプレビュー
+    const sampleRecipient = selectedRecipients[0] || { company: '株式会社サンプル', name: '山田 太郎' };
+    const previewContent = getPasswordEmailContent(sampleRecipient);
+    
+    return (
+      <Modal onClose={() => setShowPasswordEmailPreview(false)}>
+        <div className="modal-header">
+          <h3 className="modal-title">パスワード通知メールプレビュー</h3>
+        </div>
+        
+        <div className="modal-body">
+          <p>各宛先に以下のフォーマットでパスワード通知メールが送信されます。</p>
+          
+          <div className="confirmation-section">
+            <div className="confirmation-label">プレビュー例</div>
+            <div className="confirmation-value" style={{ 
+              whiteSpace: 'pre-line', 
+              backgroundColor: '#f9f9f9',
+              padding: '15px',
+              borderRadius: '4px',
+              border: '1px solid #e0e0e0'
+            }}>
+              {previewContent}
+            </div>
+          </div>
+          
+          <p className="note" style={{ fontSize: '14px', color: '#666', marginTop: '15px' }}>
+            ※ 実際には各宛先の情報（会社名、担当者名）が自動的に挿入されます。
+          </p>
+        </div>
+        
+        <div className="modal-footer">
+          <button className="action-btn" onClick={() => setShowPasswordEmailPreview(false)}>閉じる</button>
+        </div>
+      </Modal>
+    );
+  };
+
+  // パスワード通知が有効かどうか
+  const hasPasswordEmail = mailData.compressionSettings && 
+                        mailData.compressionSettings.type === 'password' && 
+                        mailData.compressionSettings.sendPasswordEmail;
 
   return (
     <div className="container" id="confirm-page">
@@ -221,6 +305,29 @@ const ConfirmPage = ({
           {renderAttachmentInfo()}
         </div>
       </div>
+      
+      {hasPasswordEmail && (
+        <div className="confirmation-section">
+          <div className="confirmation-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>パスワード通知メール</span>
+            <button 
+              className="log-details-btn"
+              onClick={() => setShowPasswordEmailPreview(true)}
+              style={{ 
+                backgroundColor: '#e8f5fe', 
+                border: '1px solid #3498db',
+                color: '#2980b9',
+                fontSize: '12px'
+              }}
+            >
+              プレビュー表示
+            </button>
+          </div>
+          <div className="confirmation-value" style={{ color: '#666' }}>
+            添付ファイルのパスワードを別メールで各宛先に送信します。
+          </div>
+        </div>
+      )}
       
       <div className="confirmation-section">
         <div className="confirmation-label">送信先 (合計: {selectedRecipients.length}件)</div>
@@ -310,6 +417,9 @@ const ConfirmPage = ({
       
       {/* メールプレビューモーダル */}
       {previewModalOpen && renderPreviewModal()}
+
+      {/* パスワード通知メールプレビューモーダル */}
+      {showPasswordEmailPreview && renderPasswordEmailPreviewModal()}
     </div>
   );
 };
