@@ -855,3 +855,84 @@ th.sortable:hover {
 .log-summary-card .status-badge {
   font-size: 14px;
 }
+/* src/styles/styles.css の追加スタイル */
+
+/* 検索フィルター部分のスタイル */
+.search-filters {
+  margin-bottom: 15px;
+}
+
+.search-filters input {
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  width: 100%;
+}
+
+/* ソートできるテーブルヘッダーのスタイル */
+th.sortable {
+  cursor: pointer;
+  background-color: #f5f7fa;
+  position: relative;
+  user-select: none;
+}
+
+th.sortable:hover {
+  background-color: #e9f5fe;
+}
+
+/* 同期進捗バーのアニメーション */
+@keyframes progress-animation {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 30px 0;
+  }
+}
+
+/* ログ概要カードのスタイル */
+.log-summary-card {
+  background-color: #f8f9fa;
+  padding: 20px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.log-summary-card h3 {
+  margin: 0;
+  color: #2c3e50;
+}
+
+.log-summary-card .status-badge {
+  font-size: 14px;
+}
+
+/* テーブルのセンター配置 */
+.center-align {
+  text-align: center;
+}
+
+/* 小さいテキスト表示用 */
+.small-text {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  display: block;
+}
+
+/* ツールチップ表示 */
+.small-text:hover {
+  text-decoration: underline;
+  cursor: default;
+}
+
+/* テーブルのセルがはみ出さないように */
+.recipients-table td {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

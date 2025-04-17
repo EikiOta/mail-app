@@ -14,13 +14,25 @@ const MailCompose = ({
 }) => {
   const [attachments, setAttachments] = useState([]);
   const [showCcModal, setShowCcModal] = useState(false);
+  const [showPasswordTemplateModal, setShowPasswordTemplateModal] = useState(false);
   const [currentRecipientId, setCurrentRecipientId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [masterCurrentPage, setMasterCurrentPage] = useState(1);
   const [selectedCc, setSelectedCc] = useState([]); // CC選択状態をトップレベルで管理
   const [compressionType, setCompressionType] = useState('password'); // 圧縮方法: 'password', 'zip', 'none'
   const [searchQuery, setSearchQuery] = useState({ name: '', company: '' });
-  const [sortConfig, setSortConfig] = useState({ key: '', direction: '' });
+  const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'asc' }); // デフォルトは番号順
+  const [passwordEmailTemplate, setPasswordEmailTemplate] = useState(
+    `<<会社名>> <<宛先名>>様
+
+いつもお世話になっております。KOKUAの天野です。
+
+先ほど送信いたしましたファイルのパスワードをお知らせいたします。
+パスワード: <<パスワード>>
+
+ご不明点がございましたら、お気軽にお問い合わせください。
+よろしくお願いいたします。`
+  );
   const itemsPerPage = 10;
 
   // 選択された受信者のみを取得
@@ -55,6 +67,11 @@ const MailCompose = ({
       ...mailData,
       content: e.target.value
     });
+  };
+
+  // パスワードメールテンプレート変更時の処理
+  const handlePasswordTemplateChange = (e) => {
+    setPasswordEmailTemplate(e.target.value);
   };
 
   // 圧縮設定変更時の処理
@@ -114,6 +131,14 @@ const MailCompose = ({
     setSortConfig({ key, direction });
   };
 
+  // ソートアイコンの取得
+  const getSortIcon = (key) => {
+    if (sortConfig.key === key) {
+      return sortConfig.direction === 'asc' ? '▲' : '▼';
+    }
+    return '▼';
+  };
+
   // パスワード生成
   const generatePassword = () => {
     const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
@@ -132,6 +157,20 @@ const MailCompose = ({
     if (passwordInput) {
       passwordInput.value = password;
     }
+  };
+
+  // パスワード通知メールテンプレートモーダルを開く
+  const openPasswordTemplateModal = () => {
+    setShowPasswordTemplateModal(true);
+  };
+
+  // パスワード通知メールのプレビュー表示
+  const renderPasswordEmailPreview = () => {
+    // サンプルでの置換
+    return passwordEmailTemplate
+      .replace('<<会社名>>', '富士通株式会社')
+      .replace('<<宛先名>>', '佐藤 翔太')
+      .replace('<<パスワード>>', document.getElementById('attachment-password')?.value || 'a8Xp2#7Z');
   };
 
   // 送信確認ボタンクリック時の処理
@@ -162,7 +201,8 @@ const MailCompose = ({
       compressionSettings: {
         type: compressionType,
         password: compressionType === 'password' ? passwordInput?.value : null,
-        sendPasswordEmail: compressionType === 'password' ? sendPasswordEmail?.checked : false
+        sendPasswordEmail: compressionType === 'password' ? sendPasswordEmail?.checked : false,
+        passwordEmailTemplate: passwordEmailTemplate
       }
     });
   };
@@ -247,10 +287,12 @@ const MailCompose = ({
       <table className="recipients-table">
         <thead>
           <tr>
-            <th width="5%">#</th>
+            <th width="5%">No</th>
             <th width="15%">宛先(To)</th>
-            <th width="20%">会社名</th>
-            <th width="40%">CC</th>
+            <th width="15%">会社名</th>
+            <th width="10%">部署</th>
+            <th width="10%">役職</th>
+            <th width="25%">CC</th>
             <th width="20%">アクション</th>
           </tr>
         </thead>
@@ -260,6 +302,16 @@ const MailCompose = ({
               <td>{startIndex + index + 1}</td>
               <td>{recipient.name}</td>
               <td>{recipient.company}</td>
+              <td>
+                <div className="small-text" title={recipient.department}>
+                  {recipient.department}
+                </div>
+              </td>
+              <td>
+                <div className="small-text" title={recipient.position}>
+                  {recipient.position}
+                </div>
+              </td>
               <td>
                 <div className="cc-tags">
                   {recipient.cc.map((cc, ccIndex) => (
@@ -336,22 +388,28 @@ const MailCompose = ({
           <thead>
             <tr>
               <th width="5%">選択</th>
-              <th width="5%">#</th>
-              <th width="15%" onClick={() => handleSort('name')} style={{ cursor: 'pointer' }}>
-                宛先(To) {sortConfig.key === 'name' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : ''}
+              <th width="5%" onClick={() => handleSort('id')} className="sortable">
+                No {getSortIcon('id')}
               </th>
-              <th width="15%" onClick={() => handleSort('company')} style={{ cursor: 'pointer' }}>
-                会社名 {sortConfig.key === 'company' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : ''}
+              <th width="15%" onClick={() => handleSort('name')} className="sortable">
+                宛先(To) {getSortIcon('name')}
               </th>
-              <th width="15%">部署</th>
-              <th width="15%">役職</th>
+              <th width="15%" onClick={() => handleSort('company')} className="sortable">
+                会社名 {getSortIcon('company')}
+              </th>
+              <th width="13%" onClick={() => handleSort('department')} className="sortable">
+                部署 {getSortIcon('department')}
+              </th>
+              <th width="12%" onClick={() => handleSort('position')} className="sortable">
+                役職 {getSortIcon('position')}
+              </th>
               <th width="15%">メールアドレス</th>
             </tr>
           </thead>
           <tbody>
             {filteredRecipients.slice(startIndex, endIndex).map((recipient, index) => (
               <tr key={recipient.id}>
-                <td>
+                <td className="center-align">
                   <input 
                     type="checkbox" 
                     className="recipient-checkbox" 
@@ -362,9 +420,17 @@ const MailCompose = ({
                 <td>{startIndex + index + 1}</td>
                 <td title={recipient.email}>{recipient.name}</td>
                 <td>{recipient.company}</td>
-                <td>{recipient.department}</td>
-                <td>{recipient.position}</td>
-                <td>{recipient.email}</td>
+                <td>
+                  <div className="small-text" title={recipient.department}>
+                    {recipient.department}
+                  </div>
+                </td>
+                <td>
+                  <div className="small-text" title={recipient.position}>
+                    {recipient.position}
+                  </div>
+                </td>
+                <td className="small-text">{recipient.email}</td>
               </tr>
             ))}
           </tbody>
@@ -431,6 +497,61 @@ const MailCompose = ({
           </button>
         </div>
       </div>
+    );
+  };
+
+  // パスワード通知メールテンプレート編集モーダル
+  const renderPasswordTemplateModal = () => {
+    return (
+      <Modal onClose={() => setShowPasswordTemplateModal(false)}>
+        <div className="modal-header">
+          <h3 className="modal-title">パスワード通知メールテンプレート編集</h3>
+        </div>
+        
+        <div className="modal-body">
+          <p>パスワード通知メールのテンプレートを編集できます。</p>
+          <p style={{ color: '#666', fontSize: '14px', marginBottom: '10px' }}>
+            以下のプレースホルダーが使用できます：<br />
+            <code>{'<<会社名>>'}</code> - 送信先の会社名<br />
+            <code>{'<<宛先名>>'}</code> - 送信先の担当者名<br />
+            <code>{'<<パスワード>>'}</code> - 設定したパスワード
+          </p>
+          
+          <div className="form-section">
+            <label htmlFor="password-email-template">テンプレート</label>
+            <textarea 
+              id="password-email-template"
+              value={passwordEmailTemplate}
+              onChange={handlePasswordTemplateChange}
+              style={{ minHeight: '200px' }}
+            />
+          </div>
+          
+          <div style={{ marginTop: '20px' }}>
+            <h4>プレビュー</h4>
+            <div className="email-preview" style={{ 
+              whiteSpace: 'pre-line',
+              backgroundColor: '#f9f9f9',
+              padding: '15px',
+              borderRadius: '4px',
+              border: '1px solid #e0e0e0',
+              marginTop: '10px'
+            }}>
+              {renderPasswordEmailPreview()}
+            </div>
+          </div>
+        </div>
+        
+        <div className="modal-footer">
+          <button className="cancel-btn" onClick={() => setShowPasswordTemplateModal(false)}>キャンセル</button>
+          <button 
+            className="confirm-btn"
+            onClick={() => setShowPasswordTemplateModal(false)}
+          >
+            保存
+          </button>
+        </div>
+      </Modal>
     );
   };
 
@@ -565,20 +686,30 @@ const MailCompose = ({
               </div>
               
               <div className={`form-section ${compressionType !== 'password' ? 'disabled' : ''}`} style={{ marginTop: '10px' }}>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <input 
-                    type="checkbox" 
-                    id="send-password-email" 
-                    defaultChecked 
-                    style={{ marginRight: '10px', width: 'auto' }}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <input 
+                      type="checkbox" 
+                      id="send-password-email" 
+                      defaultChecked 
+                      style={{ marginRight: '10px', width: 'auto' }}
+                      disabled={compressionType !== 'password'}
+                    />
+                    <label 
+                      htmlFor="send-password-email" 
+                      style={{ display: 'inline', marginBottom: 0 }}
+                    >
+                      パスワードを別メールで送信する
+                    </label>
+                  </div>
+                  <button 
+                    className="password-template-btn"
+                    onClick={openPasswordTemplateModal}
                     disabled={compressionType !== 'password'}
-                  />
-                  <label 
-                    htmlFor="send-password-email" 
-                    style={{ display: 'inline', marginBottom: 0 }}
+                    style={{ fontSize: '12px', padding: '5px 10px' }}
                   >
-                    パスワードを別メールで送信する
-                  </label>
+                    通知メールテンプレート編集
+                  </button>
                 </div>
               </div>
             </div>
@@ -621,6 +752,9 @@ const MailCompose = ({
           {renderCcModalContent()}
         </Modal>
       )}
+      
+      {/* パスワード通知メールテンプレート編集モーダル */}
+      {showPasswordTemplateModal && renderPasswordTemplateModal()}
     </div>
   );
 };

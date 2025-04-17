@@ -10,6 +10,7 @@ const Settings = ({ recipients = [] }) => {
   const [showAddTemplateModal, setShowAddTemplateModal] = useState(false);
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [showSyncModal, setShowSyncModal] = useState(false);
+  const [showPasswordTemplateModal, setShowPasswordTemplateModal] = useState(false);
   const [templates, setTemplates] = useState(TEMPLATES);
   const [currentTemplate, setCurrentTemplate] = useState(null);
   const [deleteMessage, setDeleteMessage] = useState('');
@@ -18,6 +19,17 @@ const Settings = ({ recipients = [] }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [syncing, setSyncing] = useState(false);
   const [syncComplete, setSyncComplete] = useState(false);
+  const [passwordEmailTemplate, setPasswordEmailTemplate] = useState(
+    `<<会社名>> <<宛先名>>様
+
+いつもお世話になっております。KOKUAの天野です。
+
+先ほど送信いたしましたファイルのパスワードをお知らせいたします。
+パスワード: <<パスワード>>
+
+ご不明点がございましたら、お気軽にお問い合わせください。
+よろしくお願いいたします。`
+  );
   const itemsPerPage = 10;
   const [newTemplateData, setNewTemplateData] = useState({
     name: '',
@@ -44,6 +56,16 @@ const Settings = ({ recipients = [] }) => {
     setDeleteMessage(`テンプレート「${template.name}」を削除してもよろしいですか？`);
     setDeleteTarget({ type: 'template', id: template.id });
     setShowDeleteConfirmModal(true);
+  };
+
+  // パスワード通知メールテンプレート編集モーダルを開く
+  const openPasswordTemplateModal = () => {
+    setShowPasswordTemplateModal(true);
+  };
+
+  // パスワードテンプレート変更時の処理
+  const handlePasswordTemplateChange = (e) => {
+    setPasswordEmailTemplate(e.target.value);
   };
 
   // 削除処理の実行
@@ -116,6 +138,15 @@ const Settings = ({ recipients = [] }) => {
     executeSync();
   };
 
+  // パスワード通知メールのプレビュー表示
+  const renderPasswordEmailPreview = () => {
+    // サンプルでの置換
+    return passwordEmailTemplate
+      .replace('<<会社名>>', '富士通株式会社')
+      .replace('<<宛先名>>', '佐藤 翔太')
+      .replace('<<パスワード>>', 'a8Xp2#7Z');
+  };
+
   // ページングされたデータを取得
   const getPaginatedData = () => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -142,6 +173,12 @@ const Settings = ({ recipients = [] }) => {
           >
             テンプレート管理
           </li>
+          <li 
+            className={`tab-item ${activeTab === 'password-template' ? 'active' : ''}`} 
+            onClick={() => setActiveTab('password-template')}
+          >
+            パスワード通知設定
+          </li>
         </ul>
         
         {/* タブコンテンツ */}
@@ -160,7 +197,7 @@ const Settings = ({ recipients = [] }) => {
             <table className="recipients-table">
               <thead>
                 <tr>
-                  <th width="5%">#</th>
+                  <th width="5%">No</th>
                   <th width="20%">宛先名</th>
                   <th width="25%">会社名</th>
                   <th width="15%">部署</th>
@@ -174,9 +211,17 @@ const Settings = ({ recipients = [] }) => {
                     <td>{(currentPage - 1) * itemsPerPage + index + 1}</td>
                     <td>{recipient.name}</td>
                     <td>{recipient.company}</td>
-                    <td>{recipient.department}</td>
-                    <td>{recipient.position}</td>
-                    <td>{recipient.email}</td>
+                    <td>
+                      <div className="small-text" title={recipient.department}>
+                        {recipient.department}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="small-text" title={recipient.position}>
+                        {recipient.position}
+                      </div>
+                    </td>
+                    <td className="small-text">{recipient.email}</td>
                   </tr>
                 ))}
               </tbody>
@@ -231,6 +276,52 @@ const Settings = ({ recipients = [] }) => {
                 }} />
               </div>
             ))}
+          </div>
+
+          {/* パスワード通知設定タブ */}
+          <div className={`tab-pane ${activeTab === 'password-template' ? 'active' : ''}`} id="password-template">
+            <div className="template-card">
+              <div className="account-header">
+                <h3 className="account-title">パスワード通知メールテンプレート</h3>
+              </div>
+              
+              <div className="form-section">
+                <p>添付ファイルを圧縮してパスワードを設定した場合、以下のテンプレートでパスワード通知メールが自動送信されます。</p>
+                <p style={{ color: '#666', fontSize: '14px', marginBottom: '10px' }}>
+                  以下のプレースホルダーが使用できます：<br />
+                  <code>{'<<会社名>>'}</code> - 送信先の会社名<br />
+                  <code>{'<<宛先名>>'}</code> - 送信先の担当者名<br />
+                  <code>{'<<パスワード>>'}</code> - 設定したパスワード
+                </p>
+              </div>
+
+              <div className="form-section">
+                <label htmlFor="password-template">テンプレート</label>
+                <textarea 
+                  id="password-template"
+                  value={passwordEmailTemplate}
+                  onChange={handlePasswordTemplateChange}
+                  style={{ minHeight: '250px' }}
+                />
+              </div>
+
+              <div className="form-section">
+                <label>プレビュー</label>
+                <div className="email-preview" style={{ 
+                  whiteSpace: 'pre-line',
+                  backgroundColor: '#f9f9f9',
+                  padding: '15px',
+                  borderRadius: '4px',
+                  border: '1px solid #e0e0e0'
+                }}>
+                  {renderPasswordEmailPreview()}
+                </div>
+              </div>
+
+              <div style={{ textAlign: 'right', marginTop: '20px' }}>
+                <button className="action-btn">保存</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -363,6 +454,64 @@ const Settings = ({ recipients = [] }) => {
             <button 
               className="confirm-btn"
               onClick={saveNewTemplate}
+            >
+              保存
+            </button>
+          </div>
+        </Modal>
+      )}
+      
+      {/* パスワード通知メールテンプレート編集モーダル */}
+      {showPasswordTemplateModal && (
+        <Modal onClose={() => setShowPasswordTemplateModal(false)}>
+          <div className="modal-header">
+            <h3 className="modal-title">パスワード通知メールテンプレート編集</h3>
+          </div>
+          
+          <div className="modal-body">
+            <p>パスワード通知メールのテンプレートを編集できます。</p>
+            <p style={{ color: '#666', fontSize: '14px', marginBottom: '10px' }}>
+              以下のプレースホルダーが使用できます：<br />
+              <code>{'<<会社名>>'}</code> - 送信先の会社名<br />
+              <code>{'<<宛先名>>'}</code> - 送信先の担当者名<br />
+              <code>{'<<パスワード>>'}</code> - 設定したパスワード
+            </p>
+            
+            <div className="form-section">
+              <label htmlFor="password-email-template">テンプレート</label>
+              <textarea 
+                id="password-email-template"
+                value={passwordEmailTemplate}
+                onChange={handlePasswordTemplateChange}
+                style={{ minHeight: '200px' }}
+              />
+            </div>
+            
+            <div style={{ marginTop: '20px' }}>
+              <h4>プレビュー</h4>
+              <div className="email-preview" style={{ 
+                whiteSpace: 'pre-line',
+                backgroundColor: '#f9f9f9',
+                padding: '15px',
+                borderRadius: '4px',
+                border: '1px solid #e0e0e0',
+                marginTop: '10px'
+              }}>
+                {renderPasswordEmailPreview()}
+              </div>
+            </div>
+          </div>
+          
+          <div className="modal-footer">
+            <button 
+              className="cancel-btn"
+              onClick={() => setShowPasswordTemplateModal(false)}
+            >
+              キャンセル
+            </button>
+            <button 
+              className="confirm-btn"
+              onClick={() => setShowPasswordTemplateModal(false)}
             >
               保存
             </button>

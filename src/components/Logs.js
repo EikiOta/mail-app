@@ -14,6 +14,7 @@ const Logs = ({ logs }) => {
   const [showLogDetailModal, setShowLogDetailModal] = useState(false);
   const [currentLog, setCurrentLog] = useState(null);
   const [activeDetailTab, setActiveDetailTab] = useState('summary-tab');
+  const [showPasswordEmailModal, setShowPasswordEmailModal] = useState(false);
   const itemsPerPage = 10;
 
   // ダミーの送信先データ（実際のシステムではログと一緒に保存されるはず）
@@ -22,6 +23,8 @@ const Logs = ({ logs }) => {
       id: 1,
       name: '佐藤 翔太',
       company: '富士通株式会社',
+      department: 'システムインテグレーション事業部',
+      position: '部長',
       email: 'sato.shota@fujitsu.co.jp',
       cc: [
         { id: 101, name: '山本 健二', email: 'yamamoto.kenji@fujitsu.co.jp' },
@@ -35,6 +38,8 @@ const Logs = ({ logs }) => {
       id: 2,
       name: '鈴木 健太',
       company: 'トヨタ自動車株式会社',
+      department: '開発部',
+      position: '課長',
       email: 'suzuki.kenta@toyota.co.jp',
       cc: [
         { id: 103, name: '渡辺 浩', email: 'watanabe.hiroshi@toyota.co.jp' }
@@ -47,6 +52,8 @@ const Logs = ({ logs }) => {
       id: 3,
       name: '高橋 大輔',
       company: '株式会社日立製作所',
+      department: '営業本部 関西支社 名古屋支店',
+      position: '主任',
       email: 'takahashi.daisuke@hitachi.co.jp',
       cc: [],
       status: 'success',
@@ -54,6 +61,17 @@ const Logs = ({ logs }) => {
       greeting: '株式会社日立製作所 高橋 大輔様\n\n'
     }
   ];
+
+  // パスワード通知メールのテンプレート
+  const passwordEmailTemplate = `<<会社名>> <<宛先名>>様
+
+いつもお世話になっております。KOKUAの天野です。
+
+先ほど送信いたしましたファイルのパスワードをお知らせいたします。
+パスワード: <<パスワード>>
+
+ご不明点がございましたら、お気軽にお問い合わせください。
+よろしくお願いいたします。`;
 
   // フィルター変更時の処理
   const handleFilterChange = (e) => {
@@ -123,6 +141,11 @@ const Logs = ({ logs }) => {
     setShowLogDetailModal(true);
   };
 
+  // パスワード通知メールモーダルを開く
+  const openPasswordEmailModal = () => {
+    setShowPasswordEmailModal(true);
+  };
+
   // 詳細タブの切り替え
   const handleDetailTabChange = (tabId) => {
     setActiveDetailTab(tabId);
@@ -149,7 +172,13 @@ const Logs = ({ logs }) => {
         
         <div style={{ marginTop: '10px', fontSize: '14px', color: '#666' }}>
           <strong>設定:</strong> ZIP圧縮してパスワードを設定（パスワード: a8Xp2#7Z）
-          ※パスワードは別メールで送信されています
+          <button 
+            className="password-email-btn" 
+            onClick={openPasswordEmailModal}
+            style={{ marginLeft: '10px', fontSize: '12px', padding: '2px 8px' }}
+          >
+            パスワード通知メール確認
+          </button>
         </div>
       </div>
     );
@@ -160,7 +189,7 @@ const Logs = ({ logs }) => {
     if (!currentLog) return null;
     
     return (
-      <Modal onClose={() => setShowLogDetailModal(false)}>
+      <Modal onClose={() => setShowLogDetailModal(false)} fullWidth={true}>
         <div className="modal-header">
           <h3 className="modal-title">送信ログ詳細</h3>
         </div>
@@ -238,23 +267,31 @@ const Logs = ({ logs }) => {
           
           {/* 送信先リストタブ */}
           <div className={`log-detail-pane ${activeDetailTab === 'recipients-tab' ? 'active' : ''}`} id="recipients-tab">
-            <table className="recipients-table">
+            <table className="recipients-table wide-table">
               <thead>
                 <tr>
-                  <th width="5%">#</th>
-                  <th width="15%">宛先(To)</th>
-                  <th width="20%">会社名</th>
-                  <th width="30%">CC</th>
-                  <th width="15%">ステータス</th>
-                  <th width="15%">送信日時</th>
+                  <th style={{ width: '40px' }}>No</th>
+                  <th>送信先情報</th>
+                  <th>CC</th>
+                  <th style={{ width: '80px' }}>ステータス</th>
+                  <th style={{ width: '100px' }}>送信日時</th>
                 </tr>
               </thead>
               <tbody>
                 {dummyRecipients.map((recipient, index) => (
                   <tr key={recipient.id}>
                     <td>{index + 1}</td>
-                    <td>{recipient.name}</td>
-                    <td>{recipient.company}</td>
+                    <td>
+                      <div className="recipient-info">
+                        <div className="recipient-name">{recipient.name}</div>
+                        <div className="recipient-company">{recipient.company}</div>
+                        <div className="recipient-details">
+                          <span className="detail-label">部署:</span> {recipient.department} 
+                          <span className="detail-label" style={{ marginLeft: '10px' }}>役職:</span> {recipient.position}
+                        </div>
+                        <div className="recipient-email">{recipient.email}</div>
+                      </div>
+                    </td>
                     <td>
                       <div className="cc-tags">
                         {recipient.cc.map((cc, ccIndex) => (
@@ -262,9 +299,16 @@ const Logs = ({ logs }) => {
                             {cc.name}
                           </span>
                         ))}
+                        {recipient.cc.length === 0 && (
+                          <span className="no-cc">なし</span>
+                        )}
                       </div>
                     </td>
-                    <td><span className={`status-badge ${recipient.status}`}>{recipient.status === 'success' ? '成功' : 'エラー'}</span></td>
+                    <td>
+                      <span className={`status-badge ${recipient.status}`}>
+                        {recipient.status === 'success' ? '成功' : 'エラー'}
+                      </span>
+                    </td>
                     <td>{recipient.sentTime}</td>
                   </tr>
                 ))}
@@ -275,6 +319,43 @@ const Logs = ({ logs }) => {
         
         <div className="modal-footer">
           <button className="action-btn" onClick={() => setShowLogDetailModal(false)}>閉じる</button>
+        </div>
+      </Modal>
+    );
+  };
+
+  // パスワード通知メールモーダルの内容をレンダリング
+  const renderPasswordEmailModal = () => {
+    return (
+      <Modal onClose={() => setShowPasswordEmailModal(false)}>
+        <div className="modal-header">
+          <h3 className="modal-title">パスワード通知メール</h3>
+        </div>
+        
+        <div className="modal-body">
+          <p>以下のパスワード通知メールが各宛先に別途送信されました：</p>
+          <div className="email-preview" style={{ 
+            whiteSpace: 'pre-line',
+            backgroundColor: '#f9f9f9',
+            padding: '15px',
+            borderRadius: '4px',
+            border: '1px solid #e0e0e0',
+            marginTop: '10px',
+            marginBottom: '15px'
+          }}>
+            {passwordEmailTemplate
+              .replace('<<会社名>>', '富士通株式会社')
+              .replace('<<宛先名>>', '佐藤 翔太')
+              .replace('<<パスワード>>', 'a8Xp2#7Z')}
+          </div>
+          <p style={{ color: '#666', fontSize: '14px' }}>
+            ※ このパスワード通知メールは、メール送信時に「パスワードを別メールで送信する」が選択された場合に自動的に送信されます。<br />
+            ※ テンプレートは「設定」→「テンプレート管理」から編集できます。
+          </p>
+        </div>
+        
+        <div className="modal-footer">
+          <button className="action-btn" onClick={() => setShowPasswordEmailModal(false)}>閉じる</button>
         </div>
       </Modal>
     );
@@ -345,7 +426,7 @@ const Logs = ({ logs }) => {
       <table className="log-table">
         <thead>
           <tr>
-            <th width="5%">#</th>
+            <th width="5%">No</th>
             <th width="15%">日時</th>
             <th width="25%">件名</th>
             <th width="15%">送信数</th>
@@ -385,6 +466,9 @@ const Logs = ({ logs }) => {
       
       {/* ログ詳細モーダル */}
       {showLogDetailModal && renderLogDetailModal()}
+      
+      {/* パスワード通知メールモーダル */}
+      {showPasswordEmailModal && renderPasswordEmailModal()}
     </div>
   );
 };
