@@ -8,7 +8,6 @@ const Dashboard = ({ logs, onCompose }) => {
   const [showLogDetailModal, setShowLogDetailModal] = useState(false);
   const [currentLog, setCurrentLog] = useState(null);
   const [activeDetailTab, setActiveDetailTab] = useState('summary-tab');
-  const [selectedPreviewRecipient, setSelectedPreviewRecipient] = useState(null);
 
   // ダミーの送信先データ（実際のシステムではログと一緒に保存されるはず）
   const dummyRecipients = [
@@ -53,51 +52,12 @@ const Dashboard = ({ logs, onCompose }) => {
   const openLogDetail = (log) => {
     setCurrentLog(log);
     setActiveDetailTab('summary-tab');
-    setSelectedPreviewRecipient(dummyRecipients[0]); // 最初の宛先を選択
     setShowLogDetailModal(true);
   };
 
   // 詳細タブの切り替え
   const handleDetailTabChange = (tabId) => {
     setActiveDetailTab(tabId);
-  };
-
-  // プレビュー宛先の変更
-  const handlePreviewRecipientChange = (e) => {
-    const recipientId = parseInt(e.target.value);
-    const recipient = dummyRecipients.find(r => r.id === recipientId);
-    if (recipient) {
-      setSelectedPreviewRecipient(recipient);
-    }
-  };
-
-  // メールの本文内容（ダミーデータ）
-  const getMailContent = () => {
-    return `いつもお世話になっております。
-xxxのyyyです。
-技術者のご紹介をさせていただきます。
-何かスキルマッチする案件がございましたら、ご連絡いただけますと幸いです。
-お忙しい中恐れ入りますがご確認の程よろしくお願い致します。
-※既にご存じの情報でしたらご了承ください。
-------------------------------------------------------
-【名前】I.K（27歳・男性）
-【最寄駅】星ヶ丘駅or塩釜口駅　※愛知県
-【所属】 1社先正社員
-【技術】Java,PHP,Javascript,PostgreSQL,Oracle,Eclipse
-(詳細設計～保守・運用)
-【経験年数】3年3か月
-【稼働時期】5月
-【単価】60万円　※ご相談ください
-【希望条件】
-＜必須＞
-・言語にこだわりなし
-・電車：1時間以内
-・リモート併用（相談可）
-【業務打ち合わせ可能日】
-19時30分以降対応可能（WEB/対面）
-※上記時間以前の面談は事前に相談が必要
-------------------------------------------------------
-何卒よろしくお願い申し上げます。`;
   };
 
   // 添付ファイル情報を表示
@@ -142,60 +102,54 @@ xxxのyyyです。
             >
               送信先リスト
             </div>
-            <div 
-              className={`log-detail-tab ${activeDetailTab === 'content-tab' ? 'active' : ''}`} 
-              onClick={() => handleDetailTabChange('content-tab')}
-            >
-              メール内容
-            </div>
-            <div 
-              className={`log-detail-tab ${activeDetailTab === 'preview-tab' ? 'active' : ''}`} 
-              onClick={() => handleDetailTabChange('preview-tab')}
-            >
-              宛先別プレビュー
-            </div>
-            <div 
-              className={`log-detail-tab ${activeDetailTab === 'system-tab' ? 'active' : ''}`} 
-              onClick={() => handleDetailTabChange('system-tab')}
-            >
-              システムログ
-            </div>
           </div>
           
           {/* 概要タブ */}
           <div className={`log-detail-pane ${activeDetailTab === 'summary-tab' ? 'active' : ''}`} id="summary-tab">
-            <div className="log-detail-item">
-              <div className="log-detail-label">送信日時</div>
-              <div className="log-detail-value">{currentLog.date}</div>
-            </div>
-            
-            <div className="log-detail-item">
-              <div className="log-detail-label">件名</div>
-              <div className="log-detail-value">{currentLog.subject}</div>
-            </div>
-            
-            <div className="log-detail-item">
-              <div className="log-detail-label">テンプレート</div>
-              <div className="log-detail-value">
-                {currentLog.templateId === 1 ? '人材紹介メール' : 
-                 currentLog.templateId === 2 ? '案件紹介メール' : ''}
+            <div className="log-summary-card" style={{ backgroundColor: '#f8f9fa', padding: '20px', borderRadius: '6px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                <h3 style={{ margin: '0', color: '#2c3e50' }}>{currentLog.subject}</h3>
+                <span className={`status-badge ${currentLog.status === 'success' ? 'success' : 'error'}`} style={{ fontSize: '14px' }}>
+                  {currentLog.status === 'success' ? '送信完了' : 'エラーあり'}
+                </span>
               </div>
-            </div>
-            
-            <div className="log-detail-item">
-              <div className="log-detail-label">送信数</div>
-              <div className="log-detail-value">
-                <div>合計: {currentLog.totalCount}件</div>
-                <div>成功: {currentLog.successCount}件</div>
-                <div>失敗: {currentLog.errorCount}件</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px' }}>
+                <div style={{ flex: '1', minWidth: '200px' }}>
+                  <div style={{ marginBottom: '10px' }}>
+                    <div style={{ fontSize: '14px', color: '#6c757d', marginBottom: '5px' }}>送信日時</div>
+                    <div style={{ fontWeight: 'bold' }}>{currentLog.date}</div>
+                  </div>
+                  <div style={{ marginBottom: '10px' }}>
+                    <div style={{ fontSize: '14px', color: '#6c757d', marginBottom: '5px' }}>テンプレート</div>
+                    <div>{currentLog.templateId === 1 ? '人材紹介メール' : currentLog.templateId === 2 ? '案件紹介メール' : ''}</div>
+                  </div>
+                </div>
+                <div style={{ flex: '1', minWidth: '200px' }}>
+                  <div style={{ marginBottom: '10px' }}>
+                    <div style={{ fontSize: '14px', color: '#6c757d', marginBottom: '5px' }}>送信数</div>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <div>
+                        <span style={{ fontWeight: 'bold', fontSize: '18px' }}>{currentLog.totalCount}</span>
+                        <span style={{ fontSize: '14px', color: '#6c757d', marginLeft: '5px' }}>合計</span>
+                      </div>
+                      <div>
+                        <span style={{ fontWeight: 'bold', fontSize: '18px', color: '#27ae60' }}>{currentLog.successCount}</span>
+                        <span style={{ fontSize: '14px', color: '#6c757d', marginLeft: '5px' }}>成功</span>
+                      </div>
+                      <div>
+                        <span style={{ fontWeight: 'bold', fontSize: '18px', color: '#e74c3c' }}>{currentLog.errorCount}</span>
+                        <span style={{ fontSize: '14px', color: '#6c757d', marginLeft: '5px' }}>失敗</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
             
             <div className="log-detail-item">
               <div className="log-detail-label">添付ファイル</div>
               <div className="log-detail-value">
-                <div>スキルシート_IK_20250415.xlsx (124 KB)</div>
-                <div>設定: ZIP圧縮してパスワードを設定（パスワード別途送信）</div>
+                {renderAttachmentInfo()}
               </div>
             </div>
             
@@ -239,119 +193,6 @@ xxxのyyyです。
                 ))}
               </tbody>
             </table>
-          </div>
-          
-          {/* メール内容タブ */}
-          <div className={`log-detail-pane ${activeDetailTab === 'content-tab' ? 'active' : ''}`} id="content-tab">
-            <div className="log-detail-item">
-              <div className="log-detail-label">件名</div>
-              <div className="log-detail-value">{currentLog.subject}</div>
-            </div>
-            
-            <div className="log-detail-item">
-              <div className="log-detail-label">本文</div>
-              <div className="log-detail-value" style={{ whiteSpace: 'pre-line' }}>
-                {getMailContent()}
-              </div>
-            </div>
-            
-            <div className="log-detail-item">
-              <div className="log-detail-label">添付ファイル</div>
-              <div className="log-detail-value">
-                {renderAttachmentInfo()}
-              </div>
-            </div>
-            
-            <div className="log-detail-item">
-              <div className="log-detail-label">パスワード通知メール</div>
-              <div className="log-detail-value" style={{ whiteSpace: 'pre-line' }}>
-                株式会社〇〇 ××様
-                いつもお世話になっております。xxxのyyyです。
-                先ほど送信いたしましたファイルのパスワードをお知らせいたします。
-                パスワード: a8Xp2#7Z
-                ご不明点がございましたら、お気軽にお問い合わせください。
-                よろしくお願いいたします。
-              </div>
-            </div>
-          </div>
-
-          {/* 宛先別プレビュータブ */}
-          <div className={`log-detail-pane ${activeDetailTab === 'preview-tab' ? 'active' : ''}`} id="preview-tab">
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ marginRight: '10px', fontWeight: 'bold' }}>宛先選択:</label>
-              <select 
-                value={selectedPreviewRecipient?.id || ''}
-                onChange={handlePreviewRecipientChange}
-                style={{ padding: '8px', minWidth: '250px' }}
-              >
-                {dummyRecipients.map(recipient => (
-                  <option key={recipient.id} value={recipient.id}>
-                    {recipient.name} ({recipient.company})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {selectedPreviewRecipient && (
-              <div className="email-preview">
-                <div className="preview-header" style={{ marginBottom: '15px' }}>
-                  <div><strong>送信先:</strong> {selectedPreviewRecipient.name} ({selectedPreviewRecipient.email})</div>
-                  {selectedPreviewRecipient.cc.length > 0 && (
-                    <div>
-                      <strong>CC:</strong> {selectedPreviewRecipient.cc.map(cc => cc.name).join(', ')}
-                    </div>
-                  )}
-                  <div><strong>送信日時:</strong> {selectedPreviewRecipient.sentTime}</div>
-                </div>
-
-                <div className="confirmation-section">
-                  <div className="confirmation-label">件名</div>
-                  <div className="confirmation-value">{currentLog.subject}</div>
-                </div>
-
-                <div className="confirmation-section">
-                  <div className="confirmation-label">メール内容</div>
-                  <div className="confirmation-value" style={{ 
-                    whiteSpace: 'pre-line',
-                    backgroundColor: '#f9f9f9',
-                    padding: '15px',
-                    borderRadius: '4px',
-                    border: '1px solid #e0e0e0'
-                  }}>
-                    {selectedPreviewRecipient.greeting + getMailContent()}
-                  </div>
-                </div>
-
-                <div className="confirmation-section">
-                  <div className="confirmation-label">添付ファイル</div>
-                  <div className="confirmation-value">
-                    {renderAttachmentInfo()}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-          
-          {/* システムログタブ */}
-          <div className={`log-detail-pane ${activeDetailTab === 'system-tab' ? 'active' : ''}`} id="system-tab">
-            <pre className="system-log">
-              <span className="log-timestamp">[2025-04-15 15:30:10]</span> <span className="log-level info">INFO</span> メール送信処理を開始しました。送信先: 3件
-              <span className="log-timestamp">[2025-04-15 15:30:10]</span> <span className="log-level info">INFO</span> 添付ファイル: スキルシート_IK_20250415.xlsx (124 KB) をZIP圧縮します
-              <span className="log-timestamp">[2025-04-15 15:30:11]</span> <span className="log-level info">INFO</span> 添付ファイルをZIP圧縮しました: スキルシート_IK_20250415.zip (120 KB)
-              <span className="log-timestamp">[2025-04-15 15:30:11]</span> <span className="log-level info">INFO</span> パスワード: a8Xp2#7Z を設定しました
-              <span className="log-timestamp">[2025-04-15 15:30:12]</span> <span className="log-level info">INFO</span> メール送信 (1/3): To: 佐藤 翔太 &lt;sato.shota@fujitsu.co.jp&gt;, CC: 2件
-              <span className="log-timestamp">[2025-04-15 15:30:12]</span> <span className="log-level info">INFO</span> メール送信完了: ID:20250415153012-001
-              <span className="log-timestamp">[2025-04-15 15:30:12]</span> <span className="log-level info">INFO</span> パスワード通知メール送信: To: 佐藤 翔太 &lt;sato.shota@fujitsu.co.jp&gt;
-              <span className="log-timestamp">[2025-04-15 15:30:15]</span> <span className="log-level info">INFO</span> メール送信 (2/3): To: 鈴木 健太 &lt;suzuki.kenta@toyota.co.jp&gt;, CC: 1件
-              <span className="log-timestamp">[2025-04-15 15:30:15]</span> <span className="log-level info">INFO</span> メール送信完了: ID:20250415153015-002
-              <span className="log-timestamp">[2025-04-15 15:30:15]</span> <span className="log-level info">INFO</span> パスワード通知メール送信: To: 鈴木 健太 &lt;suzuki.kenta@toyota.co.jp&gt;
-              <span className="log-timestamp">[2025-04-15 15:30:18]</span> <span className="log-level info">INFO</span> メール送信 (3/3): To: 高橋 大輔 &lt;takahashi.daisuke@hitachi.co.jp&gt;, CC: 0件
-              <span className="log-timestamp">[2025-04-15 15:30:18]</span> <span className="log-level info">INFO</span> メール送信完了: ID:20250415153018-003
-              <span className="log-timestamp">[2025-04-15 15:30:18]</span> <span className="log-level info">INFO</span> パスワード通知メール送信: To: 高橋 大輔 &lt;takahashi.daisuke@hitachi.co.jp&gt;
-              <span className="log-timestamp">[2025-04-15 15:30:19]</span> <span className="log-level info">INFO</span> 一時ファイル削除: スキルシート_IK_20250415.zip
-              <span className="log-timestamp">[2025-04-15 15:30:19]</span> <span className="log-level info">INFO</span> すべての送信処理が完了しました: 3件成功, 0件失敗
-              <span className="log-timestamp">[2025-04-15 15:30:19]</span> <span className="log-level info">INFO</span> 処理時間: 9秒
-            </pre>
           </div>
         </div>
         

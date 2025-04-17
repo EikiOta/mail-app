@@ -192,7 +192,7 @@ function App() {
           />
         );
       case 'settings':
-        return <Settings />;
+        return <Settings recipients={recipientsMaster} />;
       case 'logs':
         return <Logs logs={logs} />;
       default:

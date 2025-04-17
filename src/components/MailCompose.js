@@ -1,5 +1,5 @@
 // src/components/MailCompose.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TEMPLATES } from '../utils/data';
 import { Modal } from './common/Modal';
 import Pagination from './common/Pagination';
@@ -19,6 +19,8 @@ const MailCompose = ({
   const [masterCurrentPage, setMasterCurrentPage] = useState(1);
   const [selectedCc, setSelectedCc] = useState([]); // CC選択状態をトップレベルで管理
   const [compressionType, setCompressionType] = useState('password'); // 圧縮方法: 'password', 'zip', 'none'
+  const [searchQuery, setSearchQuery] = useState({ name: '', company: '' });
+  const [sortConfig, setSortConfig] = useState({ key: '', direction: '' });
   const itemsPerPage = 10;
 
   // 選択された受信者のみを取得
@@ -94,6 +96,22 @@ const MailCompose = ({
     recipients.forEach(r => {
       updateSelection(r.id, !allSelected);
     });
+  };
+
+  // 検索クエリの変更処理
+  const handleSearchChange = (e) => {
+    const { name, value } = e.target;
+    setSearchQuery({ ...searchQuery, [name]: value });
+    setMasterCurrentPage(1); // 検索条件が変わったらページを1に戻す
+  };
+
+  // 並べ替え処理
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
   };
 
   // パスワード生成
@@ -196,6 +214,30 @@ const MailCompose = ({
     closeCcModal();
   };
 
+  // レシピエントデータをフィルタリングしてソートする
+  const getFilteredAndSortedRecipients = () => {
+    // 検索条件でフィルタリング
+    let filteredRecipients = recipients.filter(recipient => {
+      return recipient.name.toLowerCase().includes(searchQuery.name.toLowerCase()) &&
+             recipient.company.toLowerCase().includes(searchQuery.company.toLowerCase());
+    });
+    
+    // ソート
+    if (sortConfig.key) {
+      filteredRecipients.sort((a, b) => {
+        if (a[sortConfig.key] < b[sortConfig.key]) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (a[sortConfig.key] > b[sortConfig.key]) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    
+    return filteredRecipients;
+  };
+
   // 選択された受信者の表示
   const renderSelectedRecipients = () => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -261,39 +303,80 @@ const MailCompose = ({
 
   // 宛先マスタの表示
   const renderRecipientsMaster = () => {
+    const filteredRecipients = getFilteredAndSortedRecipients();
     const startIndex = (masterCurrentPage - 1) * itemsPerPage;
-    const endIndex = Math.min(startIndex + itemsPerPage, recipients.length);
+    const endIndex = Math.min(startIndex + itemsPerPage, filteredRecipients.length);
     
     return (
-      <table className="recipients-table">
-        <thead>
-          <tr>
-            <th width="5%">選択</th>
-            <th width="5%">#</th>
-            <th width="15%">宛先(To)</th>
-            <th width="20%">会社名</th>
-            <th width="15%">メールアドレス</th>
-          </tr>
-        </thead>
-        <tbody>
-          {recipients.slice(startIndex, endIndex).map((recipient, index) => (
-            <tr key={recipient.id}>
-              <td>
-                <input 
-                  type="checkbox" 
-                  className="recipient-checkbox" 
-                  checked={recipient.selected} 
-                  onChange={(e) => updateSelection(recipient.id, e.target.checked)}
-                />
-              </td>
-              <td>{startIndex + index + 1}</td>
-              <td title={recipient.email}>{recipient.name}</td>
-              <td>{recipient.company}</td>
-              <td>{recipient.email}</td>
+      <>
+        <div className="search-filters" style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+          <div style={{ flex: 1 }}>
+            <input 
+              type="text" 
+              name="name" 
+              placeholder="宛先名で検索..." 
+              value={searchQuery.name}
+              onChange={handleSearchChange}
+              className="search-input"
+            />
+          </div>
+          <div style={{ flex: 1 }}>
+            <input 
+              type="text" 
+              name="company" 
+              placeholder="会社名で検索..." 
+              value={searchQuery.company}
+              onChange={handleSearchChange}
+              className="search-input"
+            />
+          </div>
+        </div>
+        
+        <table className="recipients-table">
+          <thead>
+            <tr>
+              <th width="5%">選択</th>
+              <th width="5%">#</th>
+              <th width="15%" onClick={() => handleSort('name')} style={{ cursor: 'pointer' }}>
+                宛先(To) {sortConfig.key === 'name' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : ''}
+              </th>
+              <th width="15%" onClick={() => handleSort('company')} style={{ cursor: 'pointer' }}>
+                会社名 {sortConfig.key === 'company' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : ''}
+              </th>
+              <th width="15%">部署</th>
+              <th width="15%">役職</th>
+              <th width="15%">メールアドレス</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {filteredRecipients.slice(startIndex, endIndex).map((recipient, index) => (
+              <tr key={recipient.id}>
+                <td>
+                  <input 
+                    type="checkbox" 
+                    className="recipient-checkbox" 
+                    checked={recipient.selected} 
+                    onChange={(e) => updateSelection(recipient.id, e.target.checked)}
+                  />
+                </td>
+                <td>{startIndex + index + 1}</td>
+                <td title={recipient.email}>{recipient.name}</td>
+                <td>{recipient.company}</td>
+                <td>{recipient.department}</td>
+                <td>{recipient.position}</td>
+                <td>{recipient.email}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        
+        <Pagination 
+          currentPage={masterCurrentPage}
+          totalItems={filteredRecipients.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setMasterCurrentPage}
+        />
+      </>
     );
   };
 
@@ -520,20 +603,12 @@ const MailCompose = ({
       {/* 宛先マスタから選択 */}
       <div className="form-section">
         <label>
-          宛先マスタ一覧 <span>({recipients.length}件)</span> 
+          宛先マスタ一覧 <span>({getFilteredAndSortedRecipients().length}件)</span> 
           <button id="toggle-selection" className="toggle-btn" onClick={toggleAllSelection}>
             全選択/解除
           </button>
         </label>
         {renderRecipientsMaster()}
-        
-        {/* ページネーション（マスタ） */}
-        <Pagination 
-          currentPage={masterCurrentPage}
-          totalItems={recipients.length}
-          itemsPerPage={itemsPerPage}
-          onPageChange={setMasterCurrentPage}
-        />
       </div>
       
       <div className="clearfix">

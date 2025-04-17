@@ -1,62 +1,37 @@
 // src/components/Settings.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TEMPLATES } from '../utils/data';
 import { Modal } from './common/Modal';
+import Pagination from './common/Pagination';
 
-const Settings = () => {
+const Settings = ({ recipients = [] }) => {
   const [activeTab, setActiveTab] = useState('recipients-settings');
   const [showEditTemplateModal, setShowEditTemplateModal] = useState(false);
   const [showAddTemplateModal, setShowAddTemplateModal] = useState(false);
-  const [showEditRecipientModal, setShowEditRecipientModal] = useState(false);
-  const [showAddRecipientModal, setShowAddRecipientModal] = useState(false);
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [showSyncModal, setShowSyncModal] = useState(false);
   const [templates, setTemplates] = useState(TEMPLATES);
   const [currentTemplate, setCurrentTemplate] = useState(null);
-  const [currentRecipient, setCurrentRecipient] = useState(null);
   const [deleteMessage, setDeleteMessage] = useState('');
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [recipientsData, setRecipientsData] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [syncing, setSyncing] = useState(false);
+  const [syncComplete, setSyncComplete] = useState(false);
+  const itemsPerPage = 10;
   const [newTemplateData, setNewTemplateData] = useState({
     name: '',
     subject: '',
     content: ''
   });
-  const [newRecipientData, setNewRecipientData] = useState({
-    name: '',
-    company: '',
-    email: ''
-  });
 
-  // 初期のレシピエントデータ（デモ用）
-  const [recipients, setRecipients] = useState([
-    {
-      id: 1,
-      name: '佐藤 翔太',
-      company: '富士通株式会社',
-      email: 'sato.shota@fujitsu.co.jp',
-      lastSent: '2025/04/15'
-    },
-    {
-      id: 2,
-      name: '鈴木 健太',
-      company: 'トヨタ自動車株式会社',
-      email: 'suzuki.kenta@toyota.co.jp',
-      lastSent: '2025/04/10'
-    },
-    {
-      id: 3,
-      name: '高橋 大輔',
-      company: '株式会社日立製作所',
-      email: 'takahashi.daisuke@hitachi.co.jp',
-      lastSent: '2025/03/22'
-    },
-    {
-      id: 4,
-      name: '田中 拓也',
-      company: 'ソニーグループ株式会社',
-      email: 'tanaka.takuya@sony.co.jp',
-      lastSent: '2025/03/15'
+  // 初期化
+  useEffect(() => {
+    // App.jsから受け取ったrecipientsがない場合は初期データを使用する
+    if (recipients && recipients.length > 0) {
+      setRecipientsData(recipients);
     }
-  ]);
+  }, [recipients]);
 
   // テンプレート編集処理
   const handleEditTemplate = (template) => {
@@ -71,25 +46,10 @@ const Settings = () => {
     setShowDeleteConfirmModal(true);
   };
 
-  // 宛先編集処理
-  const handleEditRecipient = (recipient) => {
-    setCurrentRecipient(recipient);
-    setShowEditRecipientModal(true);
-  };
-
-  // 宛先削除確認
-  const handleDeleteRecipientConfirm = (recipient) => {
-    setDeleteMessage(`宛先「${recipient.name}」を削除してもよろしいですか？`);
-    setDeleteTarget({ type: 'recipient', id: recipient.id });
-    setShowDeleteConfirmModal(true);
-  };
-
   // 削除処理の実行
   const executeDelete = () => {
     if (deleteTarget.type === 'template') {
       setTemplates(templates.filter(t => t.id !== deleteTarget.id));
-    } else if (deleteTarget.type === 'recipient') {
-      setRecipients(recipients.filter(r => r.id !== deleteTarget.id));
     }
     setShowDeleteConfirmModal(false);
   };
@@ -127,38 +87,41 @@ const Settings = () => {
     setShowEditTemplateModal(false);
   };
 
-  // 新規宛先保存
-  const saveNewRecipient = () => {
-    const { name, company, email } = newRecipientData;
-    
-    if (!name || !company || !email) {
-      alert('すべての項目を入力してください。');
-      return;
-    }
-    
-    const newId = Math.max(...recipients.map(r => r.id), 0) + 1;
-    const newRecipient = {
-      id: newId,
-      name,
-      company,
-      email,
-      lastSent: '-'
-    };
-    
-    setRecipients([...recipients, newRecipient]);
-    setNewRecipientData({ name: '', company: '', email: '' });
-    setShowAddRecipientModal(false);
+  // 顧客管理リストとの同期ダイアログを開く
+  const openSyncDialog = () => {
+    setShowSyncModal(true);
+    setSyncing(false);
+    setSyncComplete(false);
   };
 
-  // 既存宛先更新
-  const updateRecipient = () => {
-    if (!currentRecipient) return;
+  // 同期処理を実行（デモ用、実際にはファイル選択後に処理する）
+  const executeSync = () => {
+    setSyncing(true);
     
-    setRecipients(recipients.map(r => 
-      r.id === currentRecipient.id ? currentRecipient : r
-    ));
+    // 同期処理をシミュレート（2秒後に完了）
+    setTimeout(() => {
+      setSyncing(false);
+      setSyncComplete(true);
+      
+      // 完了後3秒でモーダルを閉じる
+      setTimeout(() => {
+        setShowSyncModal(false);
+      }, 3000);
+    }, 2000);
+  };
+
+  // ファイル選択ダイアログを開く
+  const openFileDialog = () => {
+    // 実際のファイル選択アクションを実行せず、ダミー処理のみ実行
+    executeSync();
+  };
+
+  // ページングされたデータを取得
+  const getPaginatedData = () => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = Math.min(startIndex + itemsPerPage, recipientsData.length);
     
-    setShowEditRecipientModal(false);
+    return recipientsData.slice(startIndex, endIndex);
   };
 
   return (
@@ -185,12 +148,12 @@ const Settings = () => {
         <div className="tab-content">
           {/* 宛先データ管理タブ */}
           <div className={`tab-pane ${activeTab === 'recipients-settings' ? 'active' : ''}`} id="recipients-settings">
-            <div style={{ marginBottom: '20px' }}>
+            <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
               <button 
                 className="action-btn" 
-                onClick={() => setShowAddRecipientModal(true)}
+                onClick={openSyncDialog}
               >
-                新規宛先追加
+                顧客管理リストと同期
               </button>
             </div>
             
@@ -198,39 +161,33 @@ const Settings = () => {
               <thead>
                 <tr>
                   <th width="5%">#</th>
-                  <th width="15%">宛先名</th>
-                  <th width="20%">会社名</th>
+                  <th width="20%">宛先名</th>
+                  <th width="25%">会社名</th>
+                  <th width="15%">部署</th>
+                  <th width="15%">役職</th>
                   <th width="20%">メールアドレス</th>
-                  <th width="15%">最終送信日</th>
-                  <th width="15%">アクション</th>
                 </tr>
               </thead>
               <tbody>
-                {recipients.map((recipient, index) => (
+                {getPaginatedData().map((recipient, index) => (
                   <tr key={recipient.id}>
-                    <td>{index + 1}</td>
+                    <td>{(currentPage - 1) * itemsPerPage + index + 1}</td>
                     <td>{recipient.name}</td>
                     <td>{recipient.company}</td>
+                    <td>{recipient.department}</td>
+                    <td>{recipient.position}</td>
                     <td>{recipient.email}</td>
-                    <td>{recipient.lastSent}</td>
-                    <td>
-                      <button 
-                        className="log-details-btn edit-recipient-btn"
-                        onClick={() => handleEditRecipient(recipient)}
-                      >
-                        編集
-                      </button>
-                      <button 
-                        className="log-details-btn delete-btn"
-                        onClick={() => handleDeleteRecipientConfirm(recipient)}
-                      >
-                        削除
-                      </button>
-                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            
+            <Pagination 
+              currentPage={currentPage}
+              totalItems={recipientsData.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+            />
           </div>
           
           {/* テンプレート管理タブ */}
@@ -413,135 +370,69 @@ const Settings = () => {
         </Modal>
       )}
       
-      {/* 宛先編集モーダル */}
-      {showEditRecipientModal && (
-        <Modal onClose={() => setShowEditRecipientModal(false)}>
+      {/* 顧客管理リスト同期モーダル */}
+      {showSyncModal && (
+        <Modal onClose={() => !syncing && setShowSyncModal(false)}>
           <div className="modal-header">
-            <h3 className="modal-title">宛先編集</h3>
+            <h3 className="modal-title">顧客管理リストと同期</h3>
           </div>
           
           <div className="modal-body">
-            <div className="form-section">
-              <label htmlFor="recipient-name">宛先名</label>
-              <input 
-                type="text" 
-                id="recipient-name" 
-                value={currentRecipient.name}
-                onChange={(e) => setCurrentRecipient({
-                  ...currentRecipient,
-                  name: e.target.value
-                })}
-              />
-            </div>
-            
-            <div className="form-section">
-              <label htmlFor="recipient-company">会社名</label>
-              <input 
-                type="text" 
-                id="recipient-company" 
-                value={currentRecipient.company}
-                onChange={(e) => setCurrentRecipient({
-                  ...currentRecipient,
-                  company: e.target.value
-                })}
-              />
-            </div>
-            
-            <div className="form-section">
-              <label htmlFor="recipient-email">メールアドレス</label>
-              <input 
-                type="email" 
-                id="recipient-email" 
-                value={currentRecipient.email}
-                onChange={(e) => setCurrentRecipient({
-                  ...currentRecipient,
-                  email: e.target.value
-                })}
-              />
-            </div>
+            {!syncing && !syncComplete ? (
+              <div>
+                <p>顧客管理用のExcelファイル（.xlsx）を選択してください。</p>
+                <p style={{ color: '#666', fontSize: '14px', marginTop: '10px' }}>
+                  ※ 同期すると現在の宛先データは上書きされます。必ず最新の顧客管理リストを選択してください。
+                </p>
+                <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
+                  <button 
+                    className="action-btn"
+                    onClick={openFileDialog}
+                  >
+                    ファイルを選択
+                  </button>
+                </div>
+              </div>
+            ) : syncing ? (
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '20px', marginBottom: '20px' }}>同期中...</div>
+                <div className="sync-progress-container" style={{ 
+                  height: '10px',
+                  backgroundColor: '#e0e0e0',
+                  borderRadius: '5px',
+                  overflow: 'hidden',
+                  marginBottom: '20px'
+                }}>
+                  <div className="sync-progress" style={{
+                    width: '70%',
+                    height: '100%',
+                    backgroundColor: '#3498db',
+                    animation: 'progress-animation 2s infinite',
+                    backgroundImage: 'linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent)',
+                    backgroundSize: '1rem 1rem'
+                  }}></div>
+                </div>
+                <p>顧客管理リストのデータを取り込んでいます...</p>
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '24px', color: '#27ae60', marginBottom: '20px' }}>✓</div>
+                <div style={{ fontSize: '20px', marginBottom: '10px' }}>同期完了</div>
+                <p>顧客管理リストのデータを取り込みました。</p>
+                <p style={{ marginTop: '10px' }}>取り込み件数: 30件</p>
+              </div>
+            )}
           </div>
           
           <div className="modal-footer">
-            <button 
-              className="cancel-btn"
-              onClick={() => setShowEditRecipientModal(false)}
-            >
-              キャンセル
-            </button>
-            <button 
-              className="confirm-btn"
-              onClick={updateRecipient}
-            >
-              保存
-            </button>
-          </div>
-        </Modal>
-      )}
-      
-      {/* 新規宛先追加モーダル */}
-      {showAddRecipientModal && (
-        <Modal onClose={() => setShowAddRecipientModal(false)}>
-          <div className="modal-header">
-            <h3 className="modal-title">新規宛先追加</h3>
-          </div>
-          
-          <div className="modal-body">
-            <div className="form-section">
-              <label htmlFor="new-recipient-name">宛先名</label>
-              <input 
-                type="text" 
-                id="new-recipient-name" 
-                placeholder="例：山田 太郎"
-                value={newRecipientData.name}
-                onChange={(e) => setNewRecipientData({
-                  ...newRecipientData,
-                  name: e.target.value
-                })}
-              />
-            </div>
-            
-            <div className="form-section">
-              <label htmlFor="new-recipient-company">会社名</label>
-              <input 
-                type="text" 
-                id="new-recipient-company" 
-                placeholder="例：株式会社サンプル"
-                value={newRecipientData.company}
-                onChange={(e) => setNewRecipientData({
-                  ...newRecipientData,
-                  company: e.target.value
-                })}
-              />
-            </div>
-            
-            <div className="form-section">
-              <label htmlFor="new-recipient-email">メールアドレス</label>
-              <input 
-                type="email" 
-                id="new-recipient-email" 
-                placeholder="例：yamada.taro@sample.co.jp"
-                value={newRecipientData.email}
-                onChange={(e) => setNewRecipientData({
-                  ...newRecipientData,
-                  email: e.target.value
-                })}
-              />
-            </div>
-          </div>
-          
-          <div className="modal-footer">
-            <button 
-              className="cancel-btn"
-              onClick={() => setShowAddRecipientModal(false)}
-            >
-              キャンセル
-            </button>
-            <button 
-              className="confirm-btn"
-              onClick={saveNewRecipient}
-            >
-              保存
-            </button>
+            {!syncing && (
+              <button 
+                className="cancel-btn"
+                onClick={() => setShowSyncModal(false)}
+              >
+                閉じる
+              </button>
+            )}
           </div>
         </Modal>
       )}
