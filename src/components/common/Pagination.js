@@ -1,19 +1,24 @@
 // src/components/common/Pagination.js
 import React from 'react';
 
-const Pagination = ({ currentPage, totalItems, itemsPerPage, onPageChange }) => {
+const Pagination = ({ currentPage, totalItems, itemsPerPage, onPageChange, noScroll = false }) => {
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   
   if (totalPages <= 1) {
     return null;
   }
 
-  // ページ変更時に画面上部にスクロール
+  // ページ変更時の処理
   const handlePageChange = (page) => {
     if (page < 1 || page > totalPages || page === currentPage) {
       return;
     }
-    window.scrollTo(0, 0); // 画面上部にスクロール
+    
+    // noScrollがtrueの場合はスクロールしない
+    if (!noScroll) {
+      window.scrollTo(0, 0); // 画面上部にスクロール
+    }
+    
     onPageChange(page);
   };
 

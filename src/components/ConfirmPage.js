@@ -102,8 +102,6 @@ const ConfirmPage = ({
         if (mailData.compressionSettings.sendPasswordEmail) {
           compressionSettingText += '　※パスワードは別メールで送信されます';
         }
-      } else if (mailData.compressionSettings.type === 'zip') {
-        compressionSettingText = 'ZIP圧縮のみ（パスワードなし）';
       } else {
         compressionSettingText = '圧縮なし';
       }
@@ -171,19 +169,19 @@ const ConfirmPage = ({
         </div>
         
         <div className="modal-body">
-          <div className="confirmation-section">
+          <div className="confirmation-section" style={{ border: 'none', padding: '0' }}>
             <div className="confirmation-label">宛先</div>
             <div className="confirmation-value">
               {previewRecipient.name} ({previewRecipient.company})
             </div>
           </div>
           
-          <div className="confirmation-section">
+          <div className="confirmation-section" style={{ border: 'none', padding: '0' }}>
             <div className="confirmation-label">件名</div>
             <div className="confirmation-value">{mailData.subject}</div>
           </div>
           
-          <div className="confirmation-section">
+          <div className="confirmation-section" style={{ border: 'none', padding: '0' }}>
             <div className="confirmation-label">メール内容</div>
             <div className="confirmation-value" style={{ 
               whiteSpace: 'pre-line', 
@@ -197,7 +195,7 @@ const ConfirmPage = ({
           </div>
           
           {mailData.attachments && mailData.attachments.length > 0 && (
-            <div className="confirmation-section">
+            <div className="confirmation-section" style={{ border: 'none', padding: '0' }}>
               <div className="confirmation-label">添付ファイル</div>
               <div className="confirmation-value">
                 {renderAttachmentInfo()}
@@ -206,7 +204,7 @@ const ConfirmPage = ({
           )}
 
           {passwordEmailContent && (
-            <div className="confirmation-section">
+            <div className="confirmation-section" style={{ border: 'none', padding: '0' }}>
               <div className="confirmation-label">パスワード通知メール</div>
               <div className="confirmation-value" style={{ 
                 whiteSpace: 'pre-line', 
@@ -250,7 +248,7 @@ const ConfirmPage = ({
         <div className="modal-body">
           <p>各宛先に以下のフォーマットでパスワード通知メールが送信されます。</p>
           
-          <div className="confirmation-section">
+          <div className="confirmation-section" style={{ border: 'none', padding: '0' }}>
             <div className="confirmation-label">プレビュー例</div>
             <div className="confirmation-value" style={{ 
               whiteSpace: 'pre-line', 
@@ -340,7 +338,7 @@ const ConfirmPage = ({
                 <th width="15%">会社名</th>
                 <th width="25%">挨拶文</th>
                 <th width="25%">CC</th>
-                <th width="15%">操作</th>
+                <th width="15%"></th>
               </tr>
             </thead>
             <tbody>
@@ -390,6 +388,9 @@ const ConfirmPage = ({
                           {cc.name}
                         </span>
                       ))}
+                      {recipient.cc.length === 0 && (
+                        <span className="no-cc">なし</span>
+                      )}
                     </div>
                   </td>
                   <td>

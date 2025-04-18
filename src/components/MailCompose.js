@@ -15,13 +15,18 @@ const MailCompose = ({
   const [attachments, setAttachments] = useState([]);
   const [showCcModal, setShowCcModal] = useState(false);
   const [showPasswordTemplateModal, setShowPasswordTemplateModal] = useState(false);
+  const [showTemplateChangeConfirm, setShowTemplateChangeConfirm] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState(null);
   const [currentRecipientId, setCurrentRecipientId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [masterCurrentPage, setMasterCurrentPage] = useState(1);
   const [selectedCc, setSelectedCc] = useState([]); // CC選択状態をトップレベルで管理
-  const [compressionType, setCompressionType] = useState('password'); // 圧縮方法: 'password', 'zip', 'none'
+  const [compressionType, setCompressionType] = useState('password'); // 圧縮方法: 'password', 'none'
   const [searchQuery, setSearchQuery] = useState({ name: '', company: '' });
+  const [ccSearchQuery, setCcSearchQuery] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'asc' }); // デフォルトは番号順
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [recipientToDelete, setRecipientToDelete] = useState(null);
   const [passwordEmailTemplate, setPasswordEmailTemplate] = useState(
     `<<会社名>> <<宛先名>>様
 
@@ -44,6 +49,19 @@ const MailCompose = ({
   // テンプレート選択時の処理
   const handleTemplateChange = (e) => {
     const templateId = parseInt(e.target.value);
+    setSelectedTemplateId(templateId);
+    
+    // 本文が空の場合は確認なしでテンプレートを適用
+    if (!mailData.subject && !mailData.content) {
+      applyTemplate(templateId);
+    } else {
+      // 本文があれば確認ダイアログを表示
+      setShowTemplateChangeConfirm(true);
+    }
+  };
+
+  // テンプレートを適用する
+  const applyTemplate = (templateId) => {
     if (templateId) {
       const template = TEMPLATES.find(t => t.id === templateId);
       if (template) {
@@ -54,6 +72,7 @@ const MailCompose = ({
         });
       }
     }
+    setShowTemplateChangeConfirm(false);
   };
 
   // 件名変更時の処理
@@ -125,6 +144,11 @@ const MailCompose = ({
     setMasterCurrentPage(1); // 検索条件が変わったらページを1に戻す
   };
 
+  // CCモーダル内の検索クエリの変更処理
+  const handleCcSearchChange = (e) => {
+    setCcSearchQuery(e.target.value);
+  };
+
   // 並べ替え処理
   const handleSort = (key) => {
     let direction = 'asc';
@@ -147,8 +171,8 @@ const MailCompose = ({
     const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
     let password = '';
     
-    // 6文字のランダムパスワードを生成
-    const length = 6;
+    // 8文字のランダムパスワードを生成
+    const length = 8;
     
     for (let i = 0; i < length; i++) {
       const randomIndex = Math.floor(Math.random() * charset.length);
@@ -160,6 +184,19 @@ const MailCompose = ({
     if (passwordInput) {
       passwordInput.value = password;
     }
+  };
+
+  // パスワード入力値のバリデーション
+  const validatePassword = (e) => {
+    const inputValue = e.target.value;
+    
+    // 英数字と記号の12文字以下にバリデーション
+    if (inputValue.length > 12) {
+      e.target.value = inputValue.slice(0, 12);
+    }
+    
+    // 許可された文字以外を削除（英数字と!@#$%^&*の記号を許可）
+    e.target.value = e.target.value.replace(/[^a-zA-Z0-9!@#$%^&*]/g, '');
   };
 
   // パスワード通知メールテンプレートモーダルを開く
@@ -220,6 +257,7 @@ const MailCompose = ({
       setSelectedCc([]);
     }
     setCurrentRecipientId(recipientId);
+    setCcSearchQuery('');
     setShowCcModal(true);
   };
 
@@ -240,6 +278,16 @@ const MailCompose = ({
       }));
   };
 
+  // CC検索結果をフィルタリング
+  const getFilteredContacts = (contacts) => {
+    if (!ccSearchQuery) return contacts;
+    
+    return contacts.filter(contact => 
+      contact.name.toLowerCase().includes(ccSearchQuery.toLowerCase()) ||
+      contact.email.toLowerCase().includes(ccSearchQuery.toLowerCase())
+    );
+  };
+
   // CC選択状態を変更する処理
   const handleCcSelection = (checked, contact) => {
     if (checked) {
@@ -247,6 +295,27 @@ const MailCompose = ({
     } else {
       setSelectedCc(selectedCc.filter(cc => cc.id !== contact.id));
     }
+  };
+
+  // 会社ごとにグループ化したCC候補を取得
+  const getGroupedContacts = () => {
+    if (!currentRecipientId) return {};
+    
+    const recipient = recipients.find(r => r.id === currentRecipientId);
+    if (!recipient) return {};
+    
+    const contacts = getCompanyContacts(recipient.company, recipient.email);
+    
+    // 会社名でグループ化
+    const groupedContacts = {};
+    contacts.forEach(contact => {
+      if (!groupedContacts[recipient.company]) {
+        groupedContacts[recipient.company] = [];
+      }
+      groupedContacts[recipient.company].push(contact);
+    });
+    
+    return groupedContacts;
   };
 
   // CCを確定する処理
@@ -281,6 +350,21 @@ const MailCompose = ({
     return filteredRecipients;
   };
 
+  // 送信先削除確認ダイアログを表示
+  const confirmDeleteRecipient = (recipientId) => {
+    setRecipientToDelete(recipientId);
+    setShowDeleteConfirm(true);
+  };
+
+  // 送信先を削除
+  const executeDeleteRecipient = () => {
+    if (recipientToDelete) {
+      updateSelection(recipientToDelete, false);
+    }
+    setShowDeleteConfirm(false);
+    setRecipientToDelete(null);
+  };
+
   // 選択された受信者の表示
   const renderSelectedRecipients = () => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -296,7 +380,7 @@ const MailCompose = ({
             <th width="10%">部署</th>
             <th width="10%">役職</th>
             <th width="25%">CC</th>
-            <th width="20%">操作</th>
+            <th width="20%"></th>
           </tr>
         </thead>
         <tbody>
@@ -343,7 +427,7 @@ const MailCompose = ({
                   </button>
                   <button 
                     className="delete-recipient-btn" 
-                    onClick={() => updateSelection(recipient.id, false)}
+                    onClick={() => confirmDeleteRecipient(recipient.id)}
                   >
                     削除
                   </button>
@@ -444,6 +528,7 @@ const MailCompose = ({
           totalItems={filteredRecipients.length}
           itemsPerPage={itemsPerPage}
           onPageChange={setMasterCurrentPage}
+          noScroll={true}
         />
       </>
     );
@@ -456,38 +541,65 @@ const MailCompose = ({
     const recipient = recipients.find(r => r.id === currentRecipientId);
     if (!recipient) return null;
     
-    const contacts = getCompanyContacts(recipient.company, recipient.email);
+    const groupedContacts = getGroupedContacts();
     
     return (
       <div>
         <h3>CCを追加</h3>
-        <input type="text" className="search-input" placeholder="名前で検索..." />
+        <input 
+          type="text" 
+          className="search-input" 
+          placeholder="名前で検索..." 
+          value={ccSearchQuery}
+          onChange={handleCcSearchChange}
+        />
         
-        <ul className="contact-list">
-          {contacts.length === 0 ? (
-            <li className="contact-item">同じ会社の他の連絡先はありません</li>
-          ) : (
-            contacts.map(contact => {
-              const isChecked = selectedCc.some(cc => cc.id === contact.id);
-              return (
-                <li key={contact.id} className="contact-item">
-                  <input 
-                    type="checkbox" 
-                    className="contact-checkbox" 
-                    checked={isChecked}
-                    onChange={(e) => handleCcSelection(e.target.checked, contact)}
-                  />
-                  <div>
-                    <div className="contact-name">{contact.name}</div>
-                    <div className="contact-email" style={{ fontSize: '12px', color: '#777' }}>
-                      {contact.email}
-                    </div>
-                  </div>
-                </li>
-              );
-            })
-          )}
-        </ul>
+        {Object.keys(groupedContacts).length === 0 ? (
+          <div className="contact-list">
+            <div className="contact-item">同じ会社の他の連絡先はありません</div>
+          </div>
+        ) : (
+          Object.keys(groupedContacts).map(company => {
+            const companyContacts = getFilteredContacts(groupedContacts[company]);
+            if (companyContacts.length === 0) return null;
+            
+            return (
+              <div key={company} className="contact-group" style={{ marginTop: '15px' }}>
+                <div className="company-name" style={{ fontWeight: 'bold', marginBottom: '10px' }}>
+                  {company}
+                </div>
+                <div className="contact-buttons" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '15px' }}>
+                  {companyContacts.map(contact => {
+                    const isSelected = selectedCc.some(cc => cc.id === contact.id);
+                    return (
+                      <button
+                        key={contact.id}
+                        className={`contact-button ${isSelected ? 'selected' : ''}`}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '4px',
+                          border: isSelected ? '1px solid #3498db' : '1px solid #ccc',
+                          backgroundColor: isSelected ? '#e1f5fe' : '#f5f5f5',
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                        onClick={() => handleCcSelection(!isSelected, contact)}
+                      >
+                        {contact.name}
+                        {isSelected && (
+                          <span style={{ marginLeft: '5px', color: '#3498db' }}>✓</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })
+        )}
         
         <div style={{ marginTop: '20px', textAlign: 'right' }}>
           <button className="cancel-btn" onClick={closeCcModal}>キャンセル</button>
@@ -496,7 +608,7 @@ const MailCompose = ({
             onClick={confirmCc}
             style={{ marginLeft: '10px' }}
           >
-            追加
+            OK
           </button>
         </div>
       </div>
@@ -558,15 +670,89 @@ const MailCompose = ({
     );
   };
 
+  // テンプレート変更確認モーダル
+  const renderTemplateChangeConfirmModal = () => {
+    return (
+      <Modal onClose={() => setShowTemplateChangeConfirm(false)}>
+        <div className="modal-header">
+          <h3 className="modal-title">テンプレート変更確認</h3>
+        </div>
+        
+        <div className="modal-body">
+          <p>テンプレートを変更すると、現在の件名と本文は上書きされます。</p>
+          <p>変更してもよろしいですか？</p>
+        </div>
+        
+        <div className="modal-footer">
+          <button 
+            className="cancel-btn"
+            onClick={() => {
+              setShowTemplateChangeConfirm(false);
+              setSelectedTemplateId(null);
+            }}
+          >
+            キャンセル
+          </button>
+          <button 
+            className="confirm-btn"
+            onClick={() => applyTemplate(selectedTemplateId)}
+          >
+            変更する
+          </button>
+        </div>
+      </Modal>
+    );
+  };
+
+  // 送信先削除確認モーダル
+  const renderDeleteConfirmModal = () => {
+    if (!recipientToDelete) return null;
+    
+    const recipient = recipients.find(r => r.id === recipientToDelete);
+    if (!recipient) return null;
+    
+    return (
+      <Modal onClose={() => setShowDeleteConfirm(false)}>
+        <div className="modal-header">
+          <h3 className="modal-title">削除確認</h3>
+        </div>
+        
+        <div className="modal-body">
+          <p>送信先「{recipient.name}」を削除してもよろしいですか？</p>
+        </div>
+        
+        <div className="modal-footer">
+          <button 
+            className="cancel-btn"
+            onClick={() => setShowDeleteConfirm(false)}
+          >
+            キャンセル
+          </button>
+          <button 
+            className="confirm-btn"
+            onClick={executeDeleteRecipient}
+          >
+            削除
+          </button>
+        </div>
+      </Modal>
+    );
+  };
+
   return (
     <div className="container" id="mail-compose-page">
       <h1>メール一斉送信</h1>
       
       {/* メール作成フォーム */}
-      <div className="form-area">
+      <div className="form-area" style={{ border: '1px solid #e0e0e0', borderRadius: '6px', padding: '15px', marginBottom: '20px' }}>
         <div className="form-section">
           <label htmlFor="template-select">テンプレート選択</label>
-          <select id="template-select" onChange={handleTemplateChange}>
+          <select 
+            id="template-select" 
+            onChange={handleTemplateChange}
+            className="select-input"
+            style={{ maxWidth: '300px' }}
+          >
             <option value="">テンプレートを選択してください</option>
             {TEMPLATES.map(template => (
               <option key={template.id} value={template.id}>{template.name}</option>
@@ -647,18 +833,6 @@ const MailCompose = ({
                 <div className="radio-option">
                   <input 
                     type="radio" 
-                    id="compress-only" 
-                    name="compression" 
-                    value="zip"
-                    checked={compressionType === 'zip'}
-                    onChange={handleCompressionChange}
-                    disabled={!hasAttachments}
-                  />
-                  <label htmlFor="compress-only">ZIP圧縮のみ（パスワードなし）</label>
-                </div>
-                <div className="radio-option">
-                  <input 
-                    type="radio" 
                     id="no-compress" 
                     name="compression" 
                     value="none"
@@ -671,13 +845,14 @@ const MailCompose = ({
               </div>
               
               <div className={`form-section ${compressionType !== 'password' || !hasAttachments ? 'disabled' : ''}`} id="password-section">
-                <label>パスワード</label>
+                <label>パスワード（英数字12文字以内）</label>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <input 
                     type="text" 
                     id="attachment-password" 
                     defaultValue="a8Xp2Z" 
                     style={{ flex: 1 }}
+                    onInput={validatePassword}
                     disabled={compressionType !== 'password' || !hasAttachments}
                   />
                   <button 
@@ -737,27 +912,34 @@ const MailCompose = ({
       
       {/* 選択した送信先テーブル */}
       <div className="form-section">
-        <label>送信先一覧 <span>({selectedRecipients.length}件)</span></label>
-        {renderSelectedRecipients()}
-        
-        {/* ページネーション */}
-        <Pagination 
-          currentPage={currentPage}
-          totalItems={selectedRecipients.length}
-          itemsPerPage={itemsPerPage}
-          onPageChange={setCurrentPage}
-        />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+          <label>送信先一覧 <span>({selectedRecipients.length}件)</span></label>
+        </div>
+        <div style={{ border: '1px solid #e0e0e0', borderRadius: '6px', padding: '15px', marginBottom: '15px' }}>
+          {renderSelectedRecipients()}
+          
+          {/* ページネーション */}
+          <Pagination 
+            currentPage={currentPage}
+            totalItems={selectedRecipients.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            noScroll={true}
+          />
+        </div>
       </div>
       
       {/* 宛先マスタから選択 */}
       <div className="form-section">
-        <label>
-          宛先マスタ一覧 <span>({getFilteredAndSortedRecipients().length}件)</span> 
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+          <label>宛先マスタ一覧 <span>({getFilteredAndSortedRecipients().length}件)</span></label>
           <button id="toggle-selection" className="toggle-btn" onClick={toggleAllSelection}>
             全選択/解除
           </button>
-        </label>
-        {renderRecipientsMaster()}
+        </div>
+        <div style={{ border: '1px solid #e0e0e0', borderRadius: '6px', padding: '15px', marginBottom: '15px' }}>
+          {renderRecipientsMaster()}
+        </div>
       </div>
       
       <div className="clearfix">
@@ -773,6 +955,12 @@ const MailCompose = ({
       
       {/* パスワード通知メールテンプレート編集モーダル */}
       {showPasswordTemplateModal && renderPasswordTemplateModal()}
+
+      {/* テンプレート変更確認モーダル */}
+      {showTemplateChangeConfirm && renderTemplateChangeConfirmModal()}
+
+      {/* 送信先削除確認モーダル */}
+      {showDeleteConfirm && renderDeleteConfirmModal()}
     </div>
   );
 };

@@ -187,10 +187,10 @@ const Settings = ({ recipients = [], lastImportDate, onImportSync }) => {
         </ul>
         
         {/* タブコンテンツ */}
-        <div className="tab-content">
+        <div className="tab-content" style={{ border: '1px solid #e0e0e0', borderRadius: '0 6px 6px 6px', padding: '20px' }}>
           {/* 宛先データ管理タブ */}
           <div className={`tab-pane ${activeTab === 'recipients-settings' ? 'active' : ''}`} id="recipients-settings">
-            <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '6px', border: '1px solid #e0e0e0' }}>
               <button 
                 className="action-btn" 
                 onClick={openSyncDialog}
@@ -203,50 +203,53 @@ const Settings = ({ recipients = [], lastImportDate, onImportSync }) => {
               </div>
             </div>
             
-            <table className="recipients-table">
-              <thead>
-                <tr>
-                  <th width="5%">No</th>
-                  <th width="20%">宛先名</th>
-                  <th width="25%">会社名</th>
-                  <th width="15%">部署</th>
-                  <th width="15%">役職</th>
-                  <th width="20%">メールアドレス</th>
-                </tr>
-              </thead>
-              <tbody>
-                {getPaginatedData().map((recipient, index) => (
-                  <tr key={recipient.id}>
-                    <td>{(currentPage - 1) * itemsPerPage + index + 1}</td>
-                    <td>{recipient.name}</td>
-                    <td>{recipient.company}</td>
-                    <td>
-                      <div className="small-text" title={recipient.department}>
-                        {recipient.department}
-                      </div>
-                    </td>
-                    <td>
-                      <div className="small-text" title={recipient.position}>
-                        {recipient.position}
-                      </div>
-                    </td>
-                    <td className="small-text">{recipient.email}</td>
+            <div style={{ border: '1px solid #e0e0e0', borderRadius: '6px', padding: '15px', marginBottom: '20px' }}>
+              <table className="recipients-table">
+                <thead>
+                  <tr>
+                    <th width="5%">No</th>
+                    <th width="20%">宛先名</th>
+                    <th width="25%">会社名</th>
+                    <th width="15%">部署</th>
+                    <th width="15%">役職</th>
+                    <th width="20%">メールアドレス</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            
-            <Pagination 
-              currentPage={currentPage}
-              totalItems={recipientsData.length}
-              itemsPerPage={itemsPerPage}
-              onPageChange={setCurrentPage}
-            />
+                </thead>
+                <tbody>
+                  {getPaginatedData().map((recipient, index) => (
+                    <tr key={recipient.id}>
+                      <td>{(currentPage - 1) * itemsPerPage + index + 1}</td>
+                      <td>{recipient.name}</td>
+                      <td>{recipient.company}</td>
+                      <td>
+                        <div className="small-text" title={recipient.department}>
+                          {recipient.department}
+                        </div>
+                      </td>
+                      <td>
+                        <div className="small-text" title={recipient.position}>
+                          {recipient.position}
+                        </div>
+                      </td>
+                      <td className="small-text">{recipient.email}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              
+              <Pagination 
+                currentPage={currentPage}
+                totalItems={recipientsData.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+                noScroll={true}
+              />
+            </div>
           </div>
           
           {/* テンプレート管理タブ */}
           <div className={`tab-pane ${activeTab === 'template-settings' ? 'active' : ''}`} id="template-settings">
-            <div style={{ marginBottom: '20px' }}>
+            <div style={{ marginBottom: '20px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '6px', border: '1px solid #e0e0e0' }}>
               <button 
                 className="action-btn" 
                 onClick={() => setShowAddTemplateModal(true)}
@@ -255,46 +258,98 @@ const Settings = ({ recipients = [], lastImportDate, onImportSync }) => {
               </button>
             </div>
             
-            {templates.map(template => (
-              <div key={template.id} className="template-card">
-                <div className="account-header">
-                  <h3 className="account-title">{template.name}</h3>
-                  <div className="account-actions">
-                    <button 
-                      className="log-details-btn edit-template-btn"
-                      onClick={() => handleEditTemplate(template)}
-                    >
-                      編集
-                    </button>
-                    <button 
-                      className="log-details-btn delete-template-btn"
-                      onClick={() => handleDeleteTemplateConfirm(template)}
-                    >
-                      削除
-                    </button>
+            <div className="templates-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+              {templates.map(template => (
+                <div key={template.id} className="template-card" style={{ 
+                  border: '1px solid #e0e0e0', 
+                  borderRadius: '6px', 
+                  padding: '15px',
+                  boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
+                  backgroundColor: '#fff'
+                }}>
+                  <div className="account-header" style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    borderBottom: '1px solid #f0f0f0',
+                    paddingBottom: '10px',
+                    marginBottom: '15px'
+                  }}>
+                    <h3 className="account-title" style={{ margin: '0', fontSize: '18px' }}>{template.name}</h3>
+                    <div className="account-actions">
+                      <button 
+                        className="log-details-btn edit-template-btn"
+                        onClick={() => handleEditTemplate(template)}
+                        style={{ marginRight: '5px' }}
+                      >
+                        編集
+                      </button>
+                      <button 
+                        className="log-details-btn delete-template-btn"
+                        onClick={() => handleDeleteTemplateConfirm(template)}
+                      >
+                        削除
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="form-section">
+                    <label style={{ fontWeight: 'bold', fontSize: '14px', marginBottom: '5px', display: 'block' }}>件名</label>
+                    <div style={{ 
+                      padding: '8px 12px', 
+                      borderRadius: '4px', 
+                      border: '1px solid #e0e0e0',
+                      backgroundColor: '#f9f9f9',
+                      marginBottom: '15px'
+                    }}>
+                      {template.subject}
+                    </div>
+                  </div>
+                  
+                  <div className="form-section">
+                    <label style={{ fontWeight: 'bold', fontSize: '14px', marginBottom: '5px', display: 'block' }}>本文</label>
+                    <div className="template-preview" style={{ 
+                      padding: '10px', 
+                      borderRadius: '4px', 
+                      border: '1px solid #e0e0e0',
+                      backgroundColor: '#f9f9f9',
+                      maxHeight: '200px',
+                      overflow: 'auto',
+                      whiteSpace: 'pre-line',
+                      fontSize: '13px'
+                    }}>
+                      {template.content}
+                    </div>
                   </div>
                 </div>
-                
-                <div className="form-section">
-                  <label>件名</label>
-                  <input type="text" value={template.subject} disabled />
-                </div>
-                
-                <div className="template-preview" dangerouslySetInnerHTML={{ 
-                  __html: template.content.replace(/\n/g, '<br>') 
-                }} />
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
           {/* パスワード通知メール設定タブ */}
           <div className={`tab-pane ${activeTab === 'password-template' ? 'active' : ''}`} id="password-template">
-            <div className="template-card">
-              <div className="account-header">
+            <div className="template-card" style={{ 
+              border: '1px solid #e0e0e0', 
+              borderRadius: '6px', 
+              padding: '20px', 
+              backgroundColor: '#fff',
+              boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
+            }}>
+              <div className="account-header" style={{ 
+                borderBottom: '1px solid #f0f0f0',
+                paddingBottom: '15px',
+                marginBottom: '20px'
+              }}>
                 <h3 className="account-title">パスワード通知メールテンプレート</h3>
               </div>
               
-              <div className="form-section">
+              <div className="form-section" style={{ 
+                backgroundColor: '#f8f9fa', 
+                padding: '15px', 
+                borderRadius: '6px', 
+                marginBottom: '20px',
+                border: '1px solid #e0e0e0'
+              }}>
                 <p>添付ファイルを圧縮してパスワードを設定した場合、以下のテンプレートでパスワード通知メールが自動送信されます。</p>
                 <p style={{ color: '#666', fontSize: '14px', marginBottom: '10px' }}>
                   以下のプレースホルダーが使用できます：<br />
@@ -305,17 +360,17 @@ const Settings = ({ recipients = [], lastImportDate, onImportSync }) => {
               </div>
 
               <div className="form-section">
-                <label htmlFor="password-template">テンプレート</label>
+                <label htmlFor="password-template" style={{ fontWeight: 'bold', marginBottom: '10px', display: 'block' }}>テンプレート</label>
                 <textarea 
                   id="password-template"
                   value={passwordEmailTemplate}
                   onChange={handlePasswordTemplateChange}
-                  style={{ minHeight: '250px' }}
+                  style={{ minHeight: '250px', border: '1px solid #e0e0e0', borderRadius: '4px' }}
                 />
               </div>
 
               <div className="form-section">
-                <label>プレビュー例</label>
+                <label style={{ fontWeight: 'bold', marginBottom: '10px', display: 'block' }}>プレビュー例</label>
                 <div className="email-preview" style={{ 
                   whiteSpace: 'pre-line',
                   backgroundColor: '#f9f9f9',
@@ -327,7 +382,7 @@ const Settings = ({ recipients = [], lastImportDate, onImportSync }) => {
                 </div>
               </div>
 
-              <div style={{ textAlign: 'right', marginTop: '20px' }}>
+              <div style={{ textAlign: 'right', marginTop: '20px', borderTop: '1px solid #f0f0f0', paddingTop: '15px' }}>
                 <button className="action-btn">保存</button>
               </div>
             </div>

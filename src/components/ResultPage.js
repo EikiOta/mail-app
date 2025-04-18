@@ -32,60 +32,62 @@ const ResultPage = ({ result, recipients, onHome, onNewMail }) => {
   // 送信結果の詳細テーブルを描画
   const renderResultDetails = () => {
     return (
-      <table className="recipients-table">
-        <thead>
-          <tr>
-            <th width="5%">#</th>
-            <th width="12%">宛先(To)</th>
-            <th width="15%">会社名</th>
-            <th width="15%">本文メール</th>
-            <th width="15%">パスワードメール</th>
-            <th width="20%">送信日時</th>
-          </tr>
-        </thead>
-        <tbody>
-          {recipients.map((recipient, index) => {
-            // 送信時間をずらす（1件あたり3秒）
-            const sendTime = new Date(now.getTime() + index * 3000);
-            const sendTimeStr = sendTime.toLocaleString('ja-JP', {
-              year: 'numeric',
-              month: '2-digit',
-              day: '2-digit',
-              hour: '2-digit',
-              minute: '2-digit',
-              second: '2-digit'
-            }).replace(/\//g, '/');
-            
-            // 成功かエラーかを決定（本文メール）- 順序通りに表示
-            const isSuccess = index < successCount;
-            
-            return (
-              <tr key={recipient.id || index}>
-                <td>{index + 1}</td>
-                <td>{recipient.name}</td>
-                <td>{recipient.company}</td>
-                <td>
-                  <span className={`status-badge ${isSuccess ? 'success' : 'error'}`}>
-                    {isSuccess ? '成功' : 'エラー'}
-                  </span>
-                </td>
-                <td>
-                  {needsPasswordEmails ? (
+      <div className="table-container" style={{ border: '1px solid #e0e0e0', borderRadius: '6px', padding: '15px', marginBottom: '20px' }}>
+        <table className="recipients-table">
+          <thead>
+            <tr>
+              <th width="5%">#</th>
+              <th width="12%">宛先(To)</th>
+              <th width="15%">会社名</th>
+              <th width="15%">本文メール</th>
+              <th width="15%">パスワードメール</th>
+              <th width="20%">送信日時</th>
+            </tr>
+          </thead>
+          <tbody>
+            {recipients.map((recipient, index) => {
+              // 送信時間をずらす（1件あたり3秒）
+              const sendTime = new Date(now.getTime() + index * 3000);
+              const sendTimeStr = sendTime.toLocaleString('ja-JP', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+              }).replace(/\//g, '/');
+              
+              // 成功かエラーかを決定（本文メール）- 順序通りに表示
+              const isSuccess = index < successCount;
+              
+              return (
+                <tr key={recipient.id || index}>
+                  <td>{index + 1}</td>
+                  <td>{recipient.name}</td>
+                  <td>{recipient.company}</td>
+                  <td>
                     <span className={`status-badge ${isSuccess ? 'success' : 'error'}`}>
                       {isSuccess ? '成功' : 'エラー'}
                     </span>
-                  ) : (
-                    <span className="status-badge" style={{ backgroundColor: '#f8f9fa', color: '#6c757d' }}>
-                      なし
-                    </span>
-                  )}
-                </td>
-                <td>{sendTimeStr}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                  </td>
+                  <td>
+                    {needsPasswordEmails ? (
+                      <span className={`status-badge ${isSuccess ? 'success' : 'error'}`}>
+                        {isSuccess ? '成功' : 'エラー'}
+                      </span>
+                    ) : (
+                      <span className="status-badge" style={{ backgroundColor: '#f8f9fa', color: '#6c757d' }}>
+                        なし
+                      </span>
+                    )}
+                  </td>
+                  <td>{sendTimeStr}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     );
   };
 
@@ -134,7 +136,7 @@ const ResultPage = ({ result, recipients, onHome, onNewMail }) => {
         {renderResultDetails()}
       </div>
       
-      <div style={{ marginTop: '30px', textAlign: 'center' }}>
+      <div style={{ marginTop: '30px', textAlign: 'center', padding: '20px', borderTop: '1px solid #e0e0e0' }}>
         <button className="action-btn" onClick={onHome}>ホームに戻る</button>
         <button className="action-btn" onClick={onNewMail} style={{ marginLeft: '10px' }}>
           新規メール作成
