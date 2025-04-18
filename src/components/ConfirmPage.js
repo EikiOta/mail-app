@@ -390,20 +390,13 @@ const ConfirmPage = ({
                   <td>
                     <div style={{ 
                       maxHeight: '60px', 
-                      overflow: 'hidden', 
-                      position: 'relative' 
+                      overflow: 'hidden'
+                      // position: 'relative' を削除
                     }}>
                       <div style={{ whiteSpace: 'pre-line' }}>
                         {recipientGreetings[recipient.id]}
                       </div>
-                      <div style={{ 
-                        position: 'absolute', 
-                        bottom: 0, 
-                        right: 0, 
-                        background: 'linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,1) 50%)',
-                        width: '100%',
-                        height: '20px'
-                      }}></div>
+                      {/* フェードアウト効果のための背景グラデーションを削除 */}
                     </div>
                     <button 
                       className="log-details-btn" 

@@ -232,26 +232,20 @@ const MailCompose = ({
       return;
     }
     
-    // 画面を一番上にスクロール
-    window.scrollTo(0, 0);
+    // 送信確認ページに移動（スクロールは行わない - App.jsで処理）
+    const passwordInput = document.getElementById('attachment-password');
+    const sendPasswordEmail = document.getElementById('send-password-email');
     
-    // 遅延処理を追加して、スクロールが完了してから遷移するように
-    setTimeout(() => {
-      // 送信確認ページに移動
-      const passwordInput = document.getElementById('attachment-password');
-      const sendPasswordEmail = document.getElementById('send-password-email');
-      
-      onConfirm({
-        ...mailData,
-        attachments,
-        compressionSettings: {
-          type: compressionType,
-          password: compressionType === 'password' ? passwordInput?.value : null,
-          sendPasswordEmail: compressionType === 'password' ? sendPasswordEmail?.checked : false,
-          passwordEmailTemplate: passwordEmailTemplate
-        }
-      });
-    }, 50); // 50ミリ秒の遅延を追加
+    onConfirm({
+      ...mailData,
+      attachments,
+      compressionSettings: {
+        type: compressionType,
+        password: compressionType === 'password' ? passwordInput?.value : null,
+        sendPasswordEmail: compressionType === 'password' ? sendPasswordEmail?.checked : false,
+        passwordEmailTemplate: passwordEmailTemplate
+      }
+    });
   };
 
   // CCモーダルを開く処理

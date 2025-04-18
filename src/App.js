@@ -94,22 +94,25 @@ function App() {
     ]);
   }, []);
 
-  // ページ遷移時の処理（画面トップに移動）
+  // useEffect でページ変更時のスクロール処理を行う
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [currentPage]);
+
+  // ページ遷移時の処理
   const handlePageChange = (page) => {
-    window.scrollTo(0, 0); // 画面上部にスクロール
     setCurrentPage(page);
   };
 
   // 送信確認ページへの遷移
   const handleConfirmation = (data) => {
-    window.scrollTo(0, 0); // 画面上部にスクロール
     setMailData(data);
-    handlePageChange('confirm');
+    // まずページを変更
+    setCurrentPage('confirm');
   };
 
   // 送信実行
   const executeSend = (processedCount = null) => {
-    window.scrollTo(0, 0); // 画面上部にスクロール
     const selectedRecipients = recipientsMaster.filter(r => r.selected);
     const totalCount = selectedRecipients.length;
     
@@ -133,7 +136,7 @@ function App() {
       );
       
       // 結果ページに遷移
-      handlePageChange('result');
+      setCurrentPage('result');
       return;
     }
     
@@ -174,7 +177,7 @@ function App() {
     );
     
     // 結果ページに遷移
-    handlePageChange('result');
+    setCurrentPage('result');
   };
 
   // 選択された受信者のリストを取得
@@ -202,7 +205,6 @@ function App() {
 
   // 新規メール作成
   const resetMailForm = () => {
-    window.scrollTo(0, 0); // 画面上部にスクロール
     setMailData({
       subject: '',
       content: '',
