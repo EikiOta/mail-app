@@ -355,30 +355,98 @@ const Dashboard = ({ logs, onCompose, lastImportDate, onImportSync }) => {
     );
   };
 
+  // 画面全体に収まるようにスタイルを調整
+  const containerStyle = {
+    height: 'calc(100vh - var(--navbar-height) - 40px)',
+    padding: '15px',
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden'
+  };
+
+  // ダッシュボードカードのスタイル調整 - より小さく
+  const dashboardCardsStyle = {
+    marginBottom: '15px',
+    display: 'flex',
+    gap: '15px'
+  };
+
+  const dashboardCardStyle = {
+    border: '1px solid #e0e0e0',
+    flex: 1,
+    padding: '12px',
+    textAlign: 'center'
+  };
+
+  const dashboardCardIconStyle = {
+    fontSize: '20px',
+    marginBottom: '5px',
+    color: 'var(--secondary-color)'
+  };
+
+  const dashboardCardCountStyle = {
+    fontSize: '28px',
+    fontWeight: 'bold',
+    color: 'var(--secondary-color)',
+    margin: '5px 0'
+  };
+
+  const dashboardCardH3Style = {
+    margin: '0 0 5px 0',
+    fontSize: '16px'
+  };
+
+  // 最近の送信履歴のスタイル調整 - スクロールなしで表示
+  const recentHistoryStyle = {
+    border: '1px solid #e0e0e0',
+    borderRadius: '6px',
+    padding: '10px 15px',
+    flex: '1'
+  };
+
+  const historyTableStyle = {
+    width: '100%',
+    marginBottom: '0'
+  };
+
+  const historyTableThStyle = {
+    padding: '8px',
+    fontSize: '13px'
+  };
+
+  const historyTableTdStyle = {
+    padding: '6px 8px',
+    fontSize: '13px'
+  };
+
+  const actionBtnStyle = {
+    marginBottom: '15px'
+  };
+
   return (
-    <div className="container" id="home-page">
-      <h1>ダッシュボード</h1>
+    <div className="container" id="home-page" style={containerStyle}>
+      <h1 style={{ marginBottom: '15px', paddingBottom: '8px', fontSize: '22px' }}>ダッシュボード</h1>
       
-      <div className="dashboard-cards">
-        <div className="dashboard-card" style={{ border: '1px solid #e0e0e0' }}>
-          <div className="icon">📧</div>
-          <h3>送信済メール</h3>
-          <div className="count">127</div>
-          <div className="description">今月の送信数</div>
+      <div className="dashboard-cards" style={dashboardCardsStyle}>
+        <div className="dashboard-card" style={dashboardCardStyle}>
+          <div className="icon" style={dashboardCardIconStyle}>📧</div>
+          <h3 style={dashboardCardH3Style}>送信済メール</h3>
+          <div className="count" style={dashboardCardCountStyle}>127</div>
+          <div className="description" style={{ fontSize: '12px', color: '#666' }}>今月の送信数</div>
         </div>
         
-        <div className="dashboard-card" style={{ border: '1px solid #e0e0e0' }}>
-          <div className="icon">👥</div>
-          <h3>宛先データ</h3>
-          <div className="count">30</div>
-          <div className="description">
+        <div className="dashboard-card" style={dashboardCardStyle}>
+          <div className="icon" style={dashboardCardIconStyle}>👥</div>
+          <h3 style={dashboardCardH3Style}>宛先データ</h3>
+          <div className="count" style={dashboardCardCountStyle}>30</div>
+          <div className="description" style={{ fontSize: '12px', color: '#666' }}>
             登録済み宛先
-            <div style={{ fontSize: '12px', marginTop: '8px', color: '#666' }}>
+            <div style={{ fontSize: '11px', marginTop: '4px', color: '#666' }}>
               最終同期: {lastImportDate}
             </div>
             <button 
               className="action-btn" 
-              style={{ fontSize: '12px', padding: '3px 10px', marginTop: '5px' }}
+              style={{ fontSize: '11px', padding: '2px 8px', marginTop: '4px' }}
               onClick={openSyncDialog}
             >
               顧客管理リストと同期
@@ -386,43 +454,43 @@ const Dashboard = ({ logs, onCompose, lastImportDate, onImportSync }) => {
           </div>
         </div>
         
-        <div className="dashboard-card" style={{ border: '1px solid #e0e0e0' }}>
-          <div className="icon">📝</div>
-          <h3>テンプレート</h3>
-          <div className="count">2</div>
-          <div className="description">利用可能テンプレート</div>
+        <div className="dashboard-card" style={dashboardCardStyle}>
+          <div className="icon" style={dashboardCardIconStyle}>📝</div>
+          <h3 style={dashboardCardH3Style}>テンプレート</h3>
+          <div className="count" style={dashboardCardCountStyle}>2</div>
+          <div className="description" style={{ fontSize: '12px', color: '#666' }}>利用可能テンプレート</div>
         </div>
       </div>
       
-      <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-        <button className="action-btn" onClick={onCompose}>新規メール作成</button>
+      <div style={{ textAlign: 'center' }}>
+        <button className="action-btn" onClick={onCompose} style={actionBtnStyle}>新規メール作成</button>
       </div>
       
-      <div className="recent-history" style={{ border: '1px solid #e0e0e0', borderRadius: '6px', padding: '15px' }}>
-        <h2>最近の送信履歴</h2>
-        <table className="history-table">
+      <div className="recent-history" style={recentHistoryStyle}>
+        <h2 style={{ fontSize: '16px', marginBottom: '10px', paddingBottom: '5px', borderBottom: '1px solid #eee' }}>最近の送信履歴</h2>
+        <table className="history-table" style={historyTableStyle}>
           <thead>
             <tr>
-              <th width="20%">日時</th>
-              <th width="35%">件名</th>
-              <th width="15%">送信数</th>
-              <th width="15%">ステータス</th>
-              <th width="15%"></th>
+              <th width="20%" style={historyTableThStyle}>日時</th>
+              <th width="35%" style={historyTableThStyle}>件名</th>
+              <th width="15%" style={historyTableThStyle}>送信数</th>
+              <th width="15%" style={historyTableThStyle}>ステータス</th>
+              <th width="15%" style={historyTableThStyle}></th>
             </tr>
           </thead>
           <tbody>
             {recentLogs.map(log => (
               <tr key={log.id}>
-                <td>{log.date}</td>
-                <td>{log.subject}</td>
-                <td>{log.totalCount}件</td>
-                <td>
-                  <span className={`status-badge ${log.status === 'success' ? 'success' : 'error'}`}>
+                <td style={historyTableTdStyle}>{log.date}</td>
+                <td style={historyTableTdStyle}>{log.subject}</td>
+                <td style={historyTableTdStyle}>{log.totalCount}件</td>
+                <td style={historyTableTdStyle}>
+                  <span className={`status-badge ${log.status === 'success' ? 'success' : 'error'}`} style={{ fontSize: '11px', padding: '2px 6px' }}>
                     {log.status === 'success' ? '完了' : 'エラー'}
                   </span>
                 </td>
-                <td>
-                  <button className="log-details-btn" onClick={() => openLogDetail(log)}>詳細</button>
+                <td style={historyTableTdStyle}>
+                  <button className="log-details-btn" style={{ fontSize: '11px', padding: '2px 6px' }} onClick={() => openLogDetail(log)}>詳細</button>
                 </td>
               </tr>
             ))}

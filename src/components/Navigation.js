@@ -17,7 +17,7 @@ const Navigation = ({ currentPage, onPageChange }) => {
           className="navbar-brand" 
           onClick={(e) => handlePageChange('home', e)}
         >
-          メール一斉送信システム
+          メール一斉送信
         </a>
         <ul className="navbar-nav">
           <li className="nav-item">

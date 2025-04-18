@@ -15,6 +15,8 @@ const ConfirmPage = ({
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [previewRecipient, setPreviewRecipient] = useState(null);
   const [showPasswordEmailPreview, setShowPasswordEmailPreview] = useState(false);
+  const [canceled, setCanceled] = useState(false);
+  const [intervalId, setIntervalId] = useState(null);
 
   // コンポーネントがマウントされた時に、各宛先ごとの挨拶文を初期化
   useEffect(() => {
@@ -30,6 +32,15 @@ const ConfirmPage = ({
     setRecipientGreetings(greetings);
   }, [selectedRecipients]);
 
+  // クリーンアップ関数
+  useEffect(() => {
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [intervalId]);
+
   // 挨拶文の変更を処理する関数
   const handleGreetingChange = (recipientId, newGreeting) => {
     setRecipientGreetings(prev => ({
@@ -43,12 +54,25 @@ const ConfirmPage = ({
     setShowSendingModal(true);
     setProgress(0);
     setProcessed(0);
+    setCanceled(false);
     
     // 送信プロセスをシミュレート
     const totalCount = selectedRecipients.length;
     let count = 0;
     
     const interval = setInterval(() => {
+      // キャンセルされた場合、処理を中断
+      if (canceled) {
+        clearInterval(interval);
+        
+        setTimeout(() => {
+          setShowSendingModal(false);
+          // 中断した状態で結果画面へ（送信済件数を渡す）
+          onSend(processed);
+        }, 500);
+        return;
+      }
+      
       count++;
       const percent = Math.round((count / totalCount) * 100);
       
@@ -65,6 +89,27 @@ const ConfirmPage = ({
         }, 500);
       }
     }, 2000 / totalCount);
+    
+    // インターバルIDを保存して後でクリーンアップできるようにする
+    setIntervalId(interval);
+  };
+
+  // 送信中止の処理 - 即座に中断するように修正
+  const cancelSending = () => {
+    if (window.confirm('送信を中止してもよろしいですか？')) {
+      // 現在のインターバルをクリアして処理を停止
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+      
+      setCanceled(true);
+      
+      // 直ちに送信モーダルを閉じる
+      setShowSendingModal(false);
+      
+      // 現在のprocessed数を使って結果画面へ遷移
+      onSend(processed);
+    }
   };
 
   // プレビューモーダルを開く
@@ -140,12 +185,7 @@ const ConfirmPage = ({
             <button 
               id="cancel-sending-btn" 
               className="action-btn warning"
-              onClick={() => {
-                if (window.confirm('送信を中止してもよろしいですか？')) {
-                  setShowSendingModal(false);
-                  onBack();
-                }
-              }}
+              onClick={cancelSending}
             >
               送信中止
             </button>
@@ -288,7 +328,7 @@ const ConfirmPage = ({
       </div>
       
       <div className="confirmation-section">
-        <div className="confirmation-label">本文テンプレート</div>
+        <div className="confirmation-label">本文</div>
         <div className="confirmation-value" style={{ whiteSpace: 'pre-line' }}>
           {mailData.content}
         </div>
@@ -333,7 +373,7 @@ const ConfirmPage = ({
           <table className="recipients-table">
             <thead>
               <tr>
-                <th width="5%">#</th>
+                <th width="5%">No</th>
                 <th width="15%">宛先(To)</th>
                 <th width="15%">会社名</th>
                 <th width="25%">挨拶文</th>

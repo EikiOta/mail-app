@@ -27,7 +27,9 @@ function App() {
   const [sendResult, setSendResult] = useState({
     totalCount: 0,
     successCount: 0,
-    errorCount: 0
+    errorCount: 0,
+    canceled: false,
+    processedCount: 0
   });
 
   // 顧客管理リスト最終同期日時
@@ -106,9 +108,35 @@ function App() {
   };
 
   // 送信実行
-  const executeSend = () => {
+  const executeSend = (processedCount = null) => {
     window.scrollTo(0, 0); // 画面上部にスクロール
     const selectedRecipients = recipientsMaster.filter(r => r.selected);
+    const totalCount = selectedRecipients.length;
+    
+    // 送信中止された場合
+    if (processedCount !== null) {
+      setSendResult({
+        totalCount: totalCount,
+        successCount: processedCount,
+        errorCount: 0,
+        canceled: true,
+        processedCount: processedCount
+      });
+      
+      // 受信者の選択状態を更新（圧縮設定を含める）
+      setRecipientsMaster(prevState => 
+        prevState.map(recipient => 
+          recipient.selected 
+            ? {...recipient, compressionSettings: mailData.compressionSettings} 
+            : recipient
+        )
+      );
+      
+      // 結果ページに遷移
+      handlePageChange('result');
+      return;
+    }
+    
     // 選択された受信者に圧縮設定を適用
     const recipientsWithSettings = selectedRecipients.map(recipient => ({
       ...recipient,
@@ -129,9 +157,11 @@ function App() {
     });
     
     setSendResult({
-      totalCount: selectedRecipients.length,
+      totalCount: totalCount,
       successCount,
-      errorCount
+      errorCount,
+      canceled: false,
+      processedCount: totalCount
     });
     
     // 受信者の選択状態を更新（圧縮設定を含める）

@@ -7,8 +7,7 @@ const Logs = ({ logs }) => {
   const [filters, setFilters] = useState({
     period: 'all',
     template: 'all',
-    status: 'all',
-    keyword: ''
+    status: 'all'
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [showLogDetailModal, setShowLogDetailModal] = useState(false);
@@ -132,12 +131,6 @@ const Logs = ({ logs }) => {
       
       // ステータスフィルター
       if (filters.status !== 'all' && log.status !== filters.status) return false;
-      
-      // キーワードフィルター
-      if (filters.keyword) {
-        const keyword = filters.keyword.toLowerCase();
-        return log.subject.toLowerCase().includes(keyword);
-      }
       
       return true;
     });
@@ -331,7 +324,7 @@ const Logs = ({ logs }) => {
       <h1>送信ログ</h1>
       
       <div className="log-filters" style={{ border: '1px solid #e0e0e0', borderRadius: '6px', padding: '15px', marginBottom: '20px' }}>
-        <div className="log-filters-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+        <div className="log-filters-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px' }}>
           <div className="log-filter">
             <label>期間</label>
             <select 
@@ -374,18 +367,6 @@ const Logs = ({ logs }) => {
               <option value="success">成功</option>
               <option value="error">エラー</option>
             </select>
-          </div>
-          
-          <div className="log-filter">
-            <label>キーワード検索</label>
-            <input 
-              type="text" 
-              className="search-input" 
-              name="keyword" 
-              placeholder="件名、送信先などで検索..."
-              value={filters.keyword}
-              onChange={handleFilterChange}
-            />
           </div>
         </div>
       </div>
