@@ -232,20 +232,26 @@ const MailCompose = ({
       return;
     }
     
-    // 送信確認ページに移動
-    const passwordInput = document.getElementById('attachment-password');
-    const sendPasswordEmail = document.getElementById('send-password-email');
+    // 画面を一番上にスクロール
+    window.scrollTo(0, 0);
     
-    onConfirm({
-      ...mailData,
-      attachments,
-      compressionSettings: {
-        type: compressionType,
-        password: compressionType === 'password' ? passwordInput?.value : null,
-        sendPasswordEmail: compressionType === 'password' ? sendPasswordEmail?.checked : false,
-        passwordEmailTemplate: passwordEmailTemplate
-      }
-    });
+    // 遅延処理を追加して、スクロールが完了してから遷移するように
+    setTimeout(() => {
+      // 送信確認ページに移動
+      const passwordInput = document.getElementById('attachment-password');
+      const sendPasswordEmail = document.getElementById('send-password-email');
+      
+      onConfirm({
+        ...mailData,
+        attachments,
+        compressionSettings: {
+          type: compressionType,
+          password: compressionType === 'password' ? passwordInput?.value : null,
+          sendPasswordEmail: compressionType === 'password' ? sendPasswordEmail?.checked : false,
+          passwordEmailTemplate: passwordEmailTemplate
+        }
+      });
+    }, 50); // 50ミリ秒の遅延を追加
   };
 
   // CCモーダルを開く処理
@@ -737,11 +743,11 @@ const MailCompose = ({
       
       {/* 宛先マスタから選択 */}
       <div className="form-section">
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-          <button id="toggle-selection" className="toggle-btn" onClick={toggleAllSelection} style={{ marginRight: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+          <label>宛先マスタ一覧 <span>({getFilteredAndSortedRecipients().length}件)</span></label>
+          <button id="toggle-selection" className="toggle-btn" onClick={toggleAllSelection}>
             全選択/解除
           </button>
-          <label>宛先マスタ一覧 <span>({getFilteredAndSortedRecipients().length}件)</span></label>
         </div>
         <div style={{ border: '1px solid #e0e0e0', borderRadius: '6px', padding: '15px', marginBottom: '15px' }}>
           {renderRecipientsMaster()}
