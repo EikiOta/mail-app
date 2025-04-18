@@ -419,7 +419,7 @@ const MailCompose = ({
                 </div>
               </td>
               <td>
-                <div className="action-buttons">
+                <div className="action-buttons" style={{ display: 'flex', gap: '15px' }}>
                   <button 
                     className="add-cc-btn" 
                     onClick={() => openCcModal(recipient.id)}
@@ -532,6 +532,274 @@ const MailCompose = ({
           noScroll={true}
         />
       </>
+    );
+  };
+
+  // CCモーダルのレンダリング
+  const renderCcModal = () => {
+    if (!showCcModal) return null;
+    
+    const recipient = recipients.find(r => r.id === currentRecipientId);
+    if (!recipient) return null;
+    
+    const groupedContacts = getGroupedContacts();
+    
+    return (
+      <Modal onClose={closeCcModal}>
+        <div className="modal-header" style={{ borderBottom: '1px solid #e0e0e0', paddingBottom: '15px', marginBottom: '15px' }}>
+          <h3 className="modal-title">CCを追加</h3>
+        </div>
+        
+        <div className="modal-body">
+          <p style={{ marginBottom: '15px' }}>
+            {recipient.name} ({recipient.company})宛のメールにCCを追加します。
+          </p>
+          
+          <div style={{ marginBottom: '20px' }}>
+            <input 
+              type="text" 
+              placeholder="名前またはメールアドレスで検索..." 
+              value={ccSearchQuery}
+              onChange={handleCcSearchChange}
+              className="search-input"
+              style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
+            />
+          </div>
+          
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>選択済みCC:</div>
+            <div style={{ color: '#666', fontStyle: 'italic' }}>
+              {selectedCc.length > 0 ? (
+                <div className="cc-tags">
+                  {selectedCc.map((cc, index) => (
+                    <span key={index} className="cc-tag">
+                      {cc.name}
+                      <span 
+                        className="remove-cc" 
+                        onClick={() => handleCcSelection(false, cc)}
+                      >
+                        &times;
+                      </span>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                "選択されていません"
+              )}
+            </div>
+          </div>
+          
+          <div>
+            <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>CC候補:</div>
+            
+            {Object.keys(groupedContacts).map(companyName => {
+              const contacts = groupedContacts[companyName];
+              const filteredContacts = getFilteredContacts(contacts);
+              
+              if (filteredContacts.length === 0) return null;
+              
+              return (
+                <div key={companyName} style={{ marginBottom: '15px' }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '10px' }}>{companyName}</div>
+                  <div>
+                    {filteredContacts.map(contact => {
+                      const isSelected = selectedCc.some(cc => cc.id === contact.id);
+                      
+                      return (
+                        <div key={contact.id} style={{ 
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '10px',
+                          borderBottom: '1px solid #eee',
+                          lineHeight: '1.4'
+                        }}>
+                          <input 
+                            type="checkbox" 
+                            checked={isSelected}
+                            onChange={(e) => handleCcSelection(e.target.checked, contact)}
+                            style={{ marginRight: '10px' }}
+                          />
+                          <div style={{ flex: 1 }}>
+                            <div>{contact.name}</div>
+                            <div style={{ color: '#666', fontSize: '14px' }}>{contact.email}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+            
+            {Object.keys(groupedContacts).length === 0 && (
+              <p style={{ color: '#666', fontStyle: 'italic' }}>この会社の他の連絡先がありません。</p>
+            )}
+          </div>
+        </div>
+        
+        <div className="modal-footer" style={{ 
+          display: 'flex', 
+          justifyContent: 'flex-end', 
+          gap: '10px',
+          borderTop: '1px solid #e0e0e0',
+          paddingTop: '15px',
+          marginTop: '15px'
+        }}>
+          <button 
+            style={{ 
+              padding: '8px 20px', 
+              background: '#f5f5f5', 
+              border: '1px solid #ccc', 
+              borderRadius: '4px', 
+              cursor: 'pointer'
+            }}
+            onClick={closeCcModal}
+          >
+            キャンセル
+          </button>
+          <button 
+            style={{ 
+              padding: '8px 20px', 
+              background: '#3498db', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '4px', 
+              cursor: 'pointer'
+            }}
+            onClick={confirmCc}
+          >
+            確定
+          </button>
+        </div>
+      </Modal>
+    );
+  };
+
+  // テンプレート変更確認モーダルのレンダリング
+  const renderTemplateChangeConfirmModal = () => {
+    if (!showTemplateChangeConfirm) return null;
+    
+    return (
+      <Modal onClose={() => setShowTemplateChangeConfirm(false)}>
+        <div className="modal-header">
+          <h3 className="modal-title">テンプレート適用確認</h3>
+        </div>
+        
+        <div className="modal-body">
+          <p>現在の件名と本文が上書きされます。よろしいですか？</p>
+        </div>
+        
+        <div className="modal-footer">
+          <button 
+            className="cancel-btn"
+            onClick={() => setShowTemplateChangeConfirm(false)}
+          >
+            キャンセル
+          </button>
+          <button 
+            className="confirm-btn"
+            onClick={() => applyTemplate(selectedTemplateId)}
+          >
+            適用
+          </button>
+        </div>
+      </Modal>
+    );
+  };
+
+  // パスワード通知メールテンプレート編集モーダルのレンダリング
+  const renderPasswordTemplateModal = () => {
+    if (!showPasswordTemplateModal) return null;
+    
+    return (
+      <Modal onClose={() => setShowPasswordTemplateModal(false)}>
+        <div className="modal-header">
+          <h3 className="modal-title">パスワード通知メールテンプレート編集</h3>
+        </div>
+        
+        <div className="modal-body">
+          <div className="form-section">
+            <p>パスワード通知メールのテンプレートを編集してください。</p>
+            <p style={{ color: '#666', fontSize: '14px', marginBottom: '10px' }}>
+              以下のプレースホルダーが使用できます：<br />
+              <code>{'<<会社名>>'}</code> - 送信先の会社名<br />
+              <code>{'<<宛先名>>'}</code> - 送信先の担当者名<br />
+              <code>{'<<パスワード>>'}</code> - 設定したパスワード
+            </p>
+            
+            <textarea 
+              value={passwordEmailTemplate}
+              onChange={handlePasswordTemplateChange}
+              style={{ width: '100%', minHeight: '200px' }}
+            />
+            
+            <div style={{ marginTop: '15px' }}>
+              <div className="section-label" style={{ fontWeight: 'bold', marginBottom: '5px' }}>プレビュー:</div>
+              <div style={{ 
+                whiteSpace: 'pre-line', 
+                backgroundColor: '#f9f9f9',
+                padding: '15px',
+                borderRadius: '4px',
+                border: '1px solid #e0e0e0'
+              }}>
+                {renderPasswordEmailPreview()}
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="modal-footer">
+          <button 
+            className="cancel-btn"
+            onClick={() => setShowPasswordTemplateModal(false)}
+          >
+            キャンセル
+          </button>
+          <button 
+            className="confirm-btn"
+            onClick={() => setShowPasswordTemplateModal(false)}
+          >
+            保存
+          </button>
+        </div>
+      </Modal>
+    );
+  };
+  
+  // 削除確認モーダルのレンダリング
+  const renderDeleteConfirmModal = () => {
+    if (!showDeleteConfirm) return null;
+    
+    const recipient = recipients.find(r => r.id === recipientToDelete);
+    if (!recipient) return null;
+    
+    return (
+      <Modal onClose={() => setShowDeleteConfirm(false)}>
+        <div className="modal-header">
+          <h3 className="modal-title">送信先削除確認</h3>
+        </div>
+        
+        <div className="modal-body">
+          <p>
+            <strong>{recipient.name}</strong> ({recipient.company})を送信先から削除してもよろしいですか？
+          </p>
+        </div>
+        
+        <div className="modal-footer">
+          <button 
+            className="cancel-btn"
+            onClick={() => setShowDeleteConfirm(false)}
+          >
+            キャンセル
+          </button>
+          <button 
+            className="confirm-btn"
+            onClick={executeDeleteRecipient}
+          >
+            削除
+          </button>
+        </div>
+      </Modal>
     );
   };
 
@@ -752,7 +1020,11 @@ const MailCompose = ({
         <button className="send-btn" onClick={handleConfirmation}>送信確認</button>
       </div>
       
-      {/* 各種モーダルなどの定義は省略 */}
+      {/* 各種モーダル */}
+      {renderCcModal()}
+      {renderTemplateChangeConfirmModal()}
+      {renderPasswordTemplateModal()}
+      {renderDeleteConfirmModal()}
     </div>
   );
 };
