@@ -186,7 +186,7 @@ const Logs = ({ logs }) => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
               <h3 style={{ margin: '0', color: '#2c3e50' }}>{currentLog.subject}</h3>
               <span className={`status-badge ${currentLog.status === 'success' ? 'success' : 'error'}`} style={{ fontSize: '14px' }}>
-                {currentLog.status === 'success' ? '送信完了' : 'エラーあり'}
+                {currentLog.status === 'success' ? '成功' : 'エラーあり'}
               </span>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px' }}>
@@ -365,7 +365,7 @@ const Logs = ({ logs }) => {
             >
               <option value="all">すべて</option>
               <option value="success">成功</option>
-              <option value="error">エラー</option>
+              <option value="error">エラーあり</option>
             </select>
           </div>
         </div>

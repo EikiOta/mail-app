@@ -1,5 +1,5 @@
 // src/App.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Navigation from './components/Navigation';
 import Dashboard from './components/Dashboard';
 import MailCompose from './components/MailCompose';
@@ -23,6 +23,9 @@ function App() {
     attachments: []
   });
   
+  // MailComposeコンポーネントの参照を保持
+  const mailComposeRef = useRef(null);
+  
   // 送信結果の状態
   const [sendResult, setSendResult] = useState({
     totalCount: 0,
@@ -34,6 +37,19 @@ function App() {
 
   // 顧客管理リスト最終同期日時
   const [lastImportDate, setLastImportDate] = useState('2025/04/10 15:30');
+
+  // グローバルナビゲーション関数の設定
+  useEffect(() => {
+    // グローバルにページ遷移関数を設定
+    window.navigateToPage = (page) => {
+      setCurrentPage(page);
+    };
+
+    return () => {
+      // クリーンアップ時に削除
+      delete window.navigateToPage;
+    };
+  }, []);
 
   // 初期化
   useEffect(() => {
@@ -101,7 +117,14 @@ function App() {
 
   // ページ遷移時の処理
   const handlePageChange = (page) => {
-    setCurrentPage(page);
+    // メール作成画面から他のページへの遷移する場合
+    if (currentPage === 'mail-compose' && page !== 'confirm' && page !== 'result') {
+      // ここでナビゲーションを直接行わず、MailComposeが判断できるようハッシュを変更
+      window.location.hash = page;
+    } else {
+      // それ以外のページは通常通り遷移
+      setCurrentPage(page);
+    }
   };
 
   // 送信確認ページへの遷移
@@ -243,6 +266,7 @@ function App() {
             addCc={addCcToRecipient}
             mailData={mailData}
             setMailData={setMailData}
+            ref={mailComposeRef}
           />
         );
       case 'confirm':

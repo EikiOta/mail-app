@@ -17,14 +17,17 @@ const MailCompose = ({
   const [showCcModal, setShowCcModal] = useState(false);
   const [showPasswordTemplateModal, setShowPasswordTemplateModal] = useState(false);
   const [showTemplateChangeConfirm, setShowTemplateChangeConfirm] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [leavePage, setLeavePage] = useState('');
   const [selectedTemplateId, setSelectedTemplateId] = useState(null);
   const [currentRecipientId, setCurrentRecipientId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [masterCurrentPage, setMasterCurrentPage] = useState(1);
+  const [ccCurrentPage, setCcCurrentPage] = useState(1);
   const [selectedCc, setSelectedCc] = useState([]); // CC選択状態をトップレベルで管理
   const [compressionType, setCompressionType] = useState('password'); // 圧縮方法: 'password', 'none'
   const [searchQuery, setSearchQuery] = useState({ name: '', company: '' });
-  const [ccSearchQuery, setCcSearchQuery] = useState('');
+  const [ccDepartmentFilter, setCcDepartmentFilter] = useState('all'); // 部署フィルター追加
   const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'asc' }); // デフォルトは番号順
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [recipientToDelete, setRecipientToDelete] = useState(null);
@@ -40,12 +43,88 @@ const MailCompose = ({
 よろしくお願いいたします。`
   );
   const itemsPerPage = 10;
+  const ccItemsPerPage = 5; // CC候補は1ページ5人に設定
 
   // 選択された受信者のみを取得
   const selectedRecipients = recipients.filter(r => r.selected);
 
   // 添付ファイルがあるかどうか
   const hasAttachments = attachments.length > 0;
+
+  // ハッシュの変更を監視してページ遷移を検知
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.substring(1);
+      if (hash && hash !== 'mail-compose') {
+        const hasContent = mailData.subject || mailData.content || attachments.length > 0 || selectedRecipients.length > 0;
+        
+        if (hasContent) {
+          setLeavePage(hash);
+          setShowLeaveConfirm(true);
+        } else {
+          // 内容がなければそのまま遷移
+          window.location.href = hash;
+        }
+      }
+    };
+    
+    window.addEventListener('hashchange', handleHashChange);
+    
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, [mailData, attachments, selectedRecipients]);
+
+  // ページ離脱時の警告設定
+  useEffect(() => {
+    // 入力内容があるかどうかをチェック
+    const hasContent = mailData.subject || mailData.content || attachments.length > 0 || selectedRecipients.length > 0;
+    
+    // beforeunload イベントハンドラ
+    const handleBeforeUnload = (e) => {
+      if (hasContent) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
+    };
+    
+    // イベントリスナーを追加
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    // クリーンアップ関数
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [mailData, attachments, selectedRecipients]);
+
+  // ページ遷移前の確認処理（Navigation.jsから呼ばれる）
+  const handlePageNavigation = (page) => {
+    // 入力内容があるかどうかをチェック
+    const hasContent = mailData.subject || mailData.content || attachments.length > 0 || selectedRecipients.length > 0;
+    
+    if (hasContent) {
+      setLeavePage(page);
+      setShowLeaveConfirm(true);
+      return false; // 遷移を中止
+    }
+    
+    return true; // 通常通り遷移
+  };
+
+  // 実際のページ遷移処理
+  const executeLeavePage = () => {
+    setShowLeaveConfirm(false);
+    
+    // App.jsのsetCurrentPageにページ情報を渡す
+    if (typeof window.navigateToPage === 'function') {
+      window.navigateToPage(leavePage);
+    } else {
+      // fallback - 直接URLのハッシュを変更
+      window.location.hash = leavePage;
+      window.location.reload();
+    }
+  };
 
   // テンプレート選択時の処理
   const handleTemplateChange = (e) => {
@@ -145,9 +224,10 @@ const MailCompose = ({
     setMasterCurrentPage(1); // 検索条件が変わったらページを1に戻す
   };
 
-  // CCモーダル内の検索クエリの変更処理
-  const handleCcSearchChange = (e) => {
-    setCcSearchQuery(e.target.value);
+  // 部署フィルターの変更処理
+  const handleDepartmentFilterChange = (e) => {
+    setCcDepartmentFilter(e.target.value);
+    setCcCurrentPage(1); // フィルター変更時にページを1に戻す
   };
 
   // 並べ替え処理
@@ -258,7 +338,8 @@ const MailCompose = ({
       setSelectedCc([]);
     }
     setCurrentRecipientId(recipientId);
-    setCcSearchQuery('');
+    setCcDepartmentFilter('all');
+    setCcCurrentPage(1);
     setShowCcModal(true);
   };
 
@@ -275,17 +356,23 @@ const MailCompose = ({
       .map(r => ({
         id: r.id,
         name: r.name,
-        email: r.email
+        email: r.email,
+        department: r.department
       }));
+  };
+
+  // 部署リストを取得（フィルタリング用）
+  const getDepartmentList = (contacts) => {
+    const departments = new Set(contacts.map(c => c.department));
+    return ['all', ...Array.from(departments)];
   };
 
   // CC検索結果をフィルタリング
   const getFilteredContacts = (contacts) => {
-    if (!ccSearchQuery) return contacts;
+    if (ccDepartmentFilter === 'all') return contacts;
     
     return contacts.filter(contact => 
-      contact.name.toLowerCase().includes(ccSearchQuery.toLowerCase()) ||
-      contact.email.toLowerCase().includes(ccSearchQuery.toLowerCase())
+      contact.department === ccDepartmentFilter
     );
   };
 
@@ -543,6 +630,16 @@ const MailCompose = ({
     if (!recipient) return null;
     
     const groupedContacts = getGroupedContacts();
+    const companyContacts = groupedContacts[recipient.company] || [];
+    const departmentList = getDepartmentList(companyContacts);
+    
+    // 部署でフィルター
+    const filteredContacts = getFilteredContacts(companyContacts);
+    
+    // ページネーション
+    const startIndex = (ccCurrentPage - 1) * ccItemsPerPage;
+    const endIndex = Math.min(startIndex + ccItemsPerPage, filteredContacts.length);
+    const paginatedContacts = filteredContacts.slice(startIndex, endIndex);
     
     return (
       <Modal onClose={closeCcModal}>
@@ -556,14 +653,23 @@ const MailCompose = ({
           </p>
           
           <div style={{ marginBottom: '20px' }}>
-            <input 
-              type="text" 
-              placeholder="名前またはメールアドレスで検索..." 
-              value={ccSearchQuery}
-              onChange={handleCcSearchChange}
-              className="search-input"
-              style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
-            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <label style={{ fontWeight: 'bold' }}>部署でフィルター:</label>
+              <select 
+                value={ccDepartmentFilter} 
+                onChange={handleDepartmentFilterChange}
+                style={{ 
+                  padding: '5px', 
+                  borderRadius: '4px',
+                  border: '1px solid #ccc',
+                  width: '200px'
+                }}
+              >
+                {departmentList.map(dept => (
+                  <option key={dept} value={dept}>{dept === 'all' ? 'すべての部署' : dept}</option>
+                ))}
+              </select>
+            </div>
           </div>
           
           <div style={{ marginBottom: '20px' }}>
@@ -592,17 +698,12 @@ const MailCompose = ({
           <div>
             <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>CC候補:</div>
             
-            {Object.keys(groupedContacts).map(companyName => {
-              const contacts = groupedContacts[companyName];
-              const filteredContacts = getFilteredContacts(contacts);
-              
-              if (filteredContacts.length === 0) return null;
-              
-              return (
-                <div key={companyName} style={{ marginBottom: '15px' }}>
-                  <div style={{ fontWeight: 'bold', marginBottom: '10px' }}>{companyName}</div>
+            {paginatedContacts.length > 0 ? (
+              <div>
+                <div style={{ marginBottom: '15px' }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '10px' }}>{recipient.company}</div>
                   <div>
-                    {filteredContacts.map(contact => {
+                    {paginatedContacts.map(contact => {
                       const isSelected = selectedCc.some(cc => cc.id === contact.id);
                       
                       return (
@@ -621,15 +722,33 @@ const MailCompose = ({
                           />
                           <div style={{ flex: 1 }}>
                             <div>{contact.name}</div>
-                            <div style={{ color: '#666', fontSize: '14px' }}>{contact.email}</div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <div style={{ color: '#666', fontSize: '14px' }}>{contact.email}</div>
+                              <div style={{ color: '#888', fontSize: '14px', fontWeight: 'bold' }}>{contact.department}</div>
+                            </div>
                           </div>
                         </div>
                       );
                     })}
                   </div>
+                  
+                  {/* ページネーション */}
+                  {filteredContacts.length > ccItemsPerPage && (
+                    <div style={{ marginTop: '15px' }}>
+                      <Pagination 
+                        currentPage={ccCurrentPage}
+                        totalItems={filteredContacts.length}
+                        itemsPerPage={ccItemsPerPage}
+                        onPageChange={setCcCurrentPage}
+                        noScroll={true}
+                      />
+                    </div>
+                  )}
                 </div>
-              );
-            })}
+              </div>
+            ) : (
+              <p style={{ color: '#666', fontStyle: 'italic' }}>選択した条件に該当する連絡先がありません。</p>
+            )}
             
             {Object.keys(groupedContacts).length === 0 && (
               <p style={{ color: '#666', fontStyle: 'italic' }}>この会社の他の連絡先がありません。</p>
@@ -803,6 +922,38 @@ const MailCompose = ({
     );
   };
 
+  // ページ離脱確認モーダルのレンダリング
+  const renderLeaveConfirmModal = () => {
+    if (!showLeaveConfirm) return null;
+    
+    return (
+      <Modal onClose={() => setShowLeaveConfirm(false)}>
+        <div className="modal-header">
+          <h3 className="modal-title">ページ移動確認</h3>
+        </div>
+        
+        <div className="modal-body">
+          <p>作成中のメールは破棄されます。よろしいですか？</p>
+        </div>
+        
+        <div className="modal-footer">
+          <button 
+            className="cancel-btn"
+            onClick={() => setShowLeaveConfirm(false)}
+          >
+            キャンセル
+          </button>
+          <button 
+            className="confirm-btn"
+            onClick={executeLeavePage}
+          >
+            移動する
+          </button>
+        </div>
+      </Modal>
+    );
+  };
+
   // テンプレート選択のスタイルを調整して二重矢印を解消
   const selectStyle = {
     maxWidth: '300px',
@@ -815,7 +966,7 @@ const MailCompose = ({
 
   return (
     <div className="container" id="mail-compose-page">
-      <h1>メール一斉送信</h1>
+      <h1>メール作成</h1>
       
       {/* メール作成フォーム */}
       <div className="form-area" style={{ border: '1px solid #e0e0e0', borderRadius: '6px', padding: '15px', marginBottom: '20px' }}>
@@ -1025,8 +1176,16 @@ const MailCompose = ({
       {renderTemplateChangeConfirmModal()}
       {renderPasswordTemplateModal()}
       {renderDeleteConfirmModal()}
+      {renderLeaveConfirmModal()}
     </div>
   );
+};
+
+// ページ遷移の確認メソッドをエクスポート
+MailCompose.handlePageNavigation = (page) => {
+  // このメソッドはApp.jsから呼ばれる予定
+  // 実装はここでは行わず、App.jsでインスタンスメソッドとして扱う
+  return true;
 };
 
 export default MailCompose;

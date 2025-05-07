@@ -153,7 +153,7 @@ const Dashboard = ({ logs, onCompose, lastImportDate, onImportSync }) => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
               <h3 style={{ margin: '0', color: '#2c3e50' }}>{currentLog.subject}</h3>
               <span className={`status-badge ${currentLog.status === 'success' ? 'success' : 'error'}`} style={{ fontSize: '14px' }}>
-                {currentLog.status === 'success' ? '送信完了' : 'エラーあり'}
+                {currentLog.status === 'success' ? '成功' : 'エラーあり'}
               </span>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px' }}>
@@ -486,7 +486,7 @@ const Dashboard = ({ logs, onCompose, lastImportDate, onImportSync }) => {
                 <td style={historyTableTdStyle}>{log.totalCount}件</td>
                 <td style={historyTableTdStyle}>
                   <span className={`status-badge ${log.status === 'success' ? 'success' : 'error'}`} style={{ fontSize: '11px', padding: '2px 6px' }}>
-                    {log.status === 'success' ? '完了' : 'エラー'}
+                    {log.status === 'success' ? '成功' : 'エラーあり'}
                   </span>
                 </td>
                 <td style={historyTableTdStyle}>

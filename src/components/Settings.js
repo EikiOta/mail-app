@@ -30,6 +30,7 @@ const Settings = ({ recipients = [], lastImportDate, onImportSync }) => {
 よろしくお願いいたします。`
   );
   const itemsPerPage = 10;
+  const maxTemplates = 6; // テンプレート数の上限
   const [newTemplateData, setNewTemplateData] = useState({
     name: '',
     subject: '',
@@ -82,6 +83,12 @@ const Settings = ({ recipients = [], lastImportDate, onImportSync }) => {
     
     if (!name || !subject || !content) {
       alert('すべての項目を入力してください。');
+      return;
+    }
+
+    // テンプレート数が上限に達していないか確認
+    if (templates.length >= maxTemplates) {
+      alert(`テンプレート数は最大${maxTemplates}件までです。既存のテンプレートを削除してから追加してください。`);
       return;
     }
     
@@ -249,13 +256,21 @@ const Settings = ({ recipients = [], lastImportDate, onImportSync }) => {
           
           {/* テンプレート管理タブ */}
           <div className={`tab-pane ${activeTab === 'template-settings' ? 'active' : ''}`} id="template-settings">
-            <div style={{ marginBottom: '20px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '6px', border: '1px solid #e0e0e0' }}>
+            <div style={{ marginBottom: '20px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '6px', border: '1px solid #e0e0e0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <button 
                 className="action-btn" 
                 onClick={() => setShowAddTemplateModal(true)}
+                disabled={templates.length >= maxTemplates}
               >
                 新規テンプレート追加
               </button>
+              <div style={{ 
+                fontSize: '14px', 
+                color: templates.length >= maxTemplates ? '#e74c3c' : '#2c3e50',
+                fontWeight: templates.length >= maxTemplates ? 'bold' : 'normal'
+              }}>
+                {templates.length} / {maxTemplates} テンプレート
+              </div>
             </div>
             
             <div className="templates-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
