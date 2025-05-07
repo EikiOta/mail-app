@@ -25,6 +25,7 @@ function App() {
   
   // MailComposeコンポーネントの参照を保持
   const mailComposeRef = useRef(null);
+  const confirmPageRef = useRef(null);
   
   // 送信結果の状態
   const [sendResult, setSendResult] = useState({
@@ -42,14 +43,40 @@ function App() {
   useEffect(() => {
     // グローバルにページ遷移関数を設定
     window.navigateToPage = (page) => {
-      setCurrentPage(page);
+      // 「遷移先ページ」を設定する機能を分離
+      const executePageChange = (targetPage) => {
+        setCurrentPage(targetPage);
+      };
+      
+      if (currentPage === 'mail-compose') {
+        // メール作成画面からの遷移
+        const canNavigate = mailComposeRef.current && 
+                          typeof mailComposeRef.current.handlePageNavigation === 'function' && 
+                          mailComposeRef.current.handlePageNavigation(page);
+        
+        if (!canNavigate) {
+          // メール作成画面が遷移を拒否（警告表示など）
+          return;
+        }
+      } else if (currentPage === 'confirm') {
+        // 送信確認画面からの遷移
+        // 「編集に戻る」または「送信実行」以外の遷移は確認が必要
+        if (page !== 'mail-compose' && page !== 'result') {
+          // 遷移先をハッシュで設定し、ConfirmPage側で検知
+          window.location.hash = page;
+          return;
+        }
+      }
+      
+      // 通常の遷移
+      executePageChange(page);
     };
 
     return () => {
       // クリーンアップ時に削除
       delete window.navigateToPage;
     };
-  }, []);
+  }, [currentPage]);
 
   // 初期化
   useEffect(() => {
@@ -110,6 +137,26 @@ function App() {
     ]);
   }, []);
 
+  // ハッシュ変更イベントハンドラ（特別なハッシュを検知する）
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.substring(1);
+      
+      // 直接遷移用の特殊ハッシュを検知
+      if (hash.startsWith('direct-')) {
+        const targetPage = hash.replace('direct-', '');
+        setCurrentPage(targetPage);
+        window.location.hash = ''; // ハッシュをクリア
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, []);
+
   // useEffect でページ変更時のスクロール処理を行う
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -120,6 +167,9 @@ function App() {
     // メール作成画面から他のページへの遷移する場合
     if (currentPage === 'mail-compose' && page !== 'confirm' && page !== 'result') {
       // ここでナビゲーションを直接行わず、MailComposeが判断できるようハッシュを変更
+      window.location.hash = page;
+    } else if (currentPage === 'confirm' && page !== 'mail-compose' && page !== 'result') {
+      // 確認画面から他のページへの遷移する場合
       window.location.hash = page;
     } else {
       // それ以外のページは通常通り遷移
@@ -276,6 +326,7 @@ function App() {
             selectedRecipients={getSelectedRecipients()}
             onBack={() => handlePageChange('mail-compose')}
             onSend={executeSend}
+            ref={confirmPageRef}
           />
         );
       case 'result':

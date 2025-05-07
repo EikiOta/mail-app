@@ -15,7 +15,7 @@ const MailCompose = ({
   // 状態管理の変数宣言部分は省略...
   const [attachments, setAttachments] = useState([]);
   const [showCcModal, setShowCcModal] = useState(false);
-  const [showPasswordTemplateModal, setShowPasswordTemplateModal] = useState(false);
+  const [showPasswordEmailModal, setShowPasswordEmailModal] = useState(false);
   const [showTemplateChangeConfirm, setShowTemplateChangeConfirm] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [showAttachmentDeleteConfirm, setShowAttachmentDeleteConfirm] = useState(false);
@@ -33,7 +33,7 @@ const MailCompose = ({
   const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'asc' }); // デフォルトは番号順
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [recipientToDelete, setRecipientToDelete] = useState(null);
-  const [passwordEmailTemplate, setPasswordEmailTemplate] = useState(
+  const [passwordEmail, setPasswordEmail] = useState(
     `<<会社名>> <<宛先名>>様
 
 いつもお世話になっております。xxxのyyyです。
@@ -177,9 +177,9 @@ const MailCompose = ({
     });
   };
 
-  // パスワードメールテンプレート変更時の処理
-  const handlePasswordTemplateChange = (e) => {
-    setPasswordEmailTemplate(e.target.value);
+  // パスワード通知メール変更時の処理
+  const handlePasswordEmailChange = (e) => {
+    setPasswordEmail(e.target.value);
   };
 
   // 圧縮設定変更時の処理
@@ -296,15 +296,15 @@ const MailCompose = ({
     e.target.value = e.target.value.replace(/[^a-zA-Z0-9!@#$%^&*]/g, '');
   };
 
-  // パスワード通知メールテンプレートモーダルを開く
-  const openPasswordTemplateModal = () => {
-    setShowPasswordTemplateModal(true);
+  // パスワード通知メールモーダルを開く
+  const openPasswordEmailModal = () => {
+    setShowPasswordEmailModal(true);
   };
 
   // パスワード通知メールのプレビュー表示
   const renderPasswordEmailPreview = () => {
     // プレビュー例での置換
-    return passwordEmailTemplate
+    return passwordEmail
       .replace('<<会社名>>', '株式会社サンプル')
       .replace('<<宛先名>>', '山田 太郎')
       .replace('<<パスワード>>', document.getElementById('attachment-password')?.value || 'a8Xp2Z');
@@ -339,7 +339,7 @@ const MailCompose = ({
         type: compressionType,
         password: compressionType === 'password' ? passwordInput?.value : null,
         sendPasswordEmail: compressionType === 'password' ? sendPasswordEmail?.checked : false,
-        passwordEmailTemplate: passwordEmailTemplate
+        passwordEmailTemplate: passwordEmail
       }
     });
   };
@@ -842,19 +842,19 @@ const MailCompose = ({
     );
   };
 
-  // パスワード通知メールテンプレート編集モーダルのレンダリング
-  const renderPasswordTemplateModal = () => {
-    if (!showPasswordTemplateModal) return null;
+  // パスワード通知メール編集モーダルのレンダリング
+  const renderPasswordEmailModal = () => {
+    if (!showPasswordEmailModal) return null;
     
     return (
-      <Modal onClose={() => setShowPasswordTemplateModal(false)}>
+      <Modal onClose={() => setShowPasswordEmailModal(false)}>
         <div className="modal-header">
-          <h3 className="modal-title">パスワード通知メールテンプレート編集</h3>
+          <h3 className="modal-title">パスワード通知メール編集</h3>
         </div>
         
         <div className="modal-body">
           <div className="form-section">
-            <p>パスワード通知メールのテンプレートを編集してください。</p>
+            <p>パスワード通知メールの内容を編集してください。</p>
             <p style={{ color: '#666', fontSize: '14px', marginBottom: '10px' }}>
               以下のプレースホルダーが使用できます：<br />
               <code>{'<<会社名>>'}</code> - 送信先の会社名<br />
@@ -863,8 +863,8 @@ const MailCompose = ({
             </p>
             
             <textarea 
-              value={passwordEmailTemplate}
-              onChange={handlePasswordTemplateChange}
+              value={passwordEmail}
+              onChange={handlePasswordEmailChange}
               style={{ width: '100%', minHeight: '200px' }}
             />
             
@@ -886,13 +886,13 @@ const MailCompose = ({
         <div className="modal-footer">
           <button 
             className="cancel-btn"
-            onClick={() => setShowPasswordTemplateModal(false)}
+            onClick={() => setShowPasswordEmailModal(false)}
           >
             キャンセル
           </button>
           <button 
             className="confirm-btn"
-            onClick={() => setShowPasswordTemplateModal(false)}
+            onClick={() => setShowPasswordEmailModal(false)}
           >
             保存
           </button>
@@ -1163,7 +1163,7 @@ const MailCompose = ({
                   </div>
                   <button 
                     className="password-template-btn"
-                    onClick={openPasswordTemplateModal}
+                    onClick={openPasswordEmailModal}
                     disabled={compressionType !== 'password' || !hasAttachments}
                     style={{ 
                       fontSize: '12px', 
@@ -1179,7 +1179,7 @@ const MailCompose = ({
                     }}
                   >
                     <span style={{ fontSize: '14px' }}>✉️</span>
-                    通知メールテンプレート編集
+                    パスワード通知メール編集
                   </button>
                 </div>
               </div>
@@ -1227,7 +1227,7 @@ const MailCompose = ({
       {/* 各種モーダル */}
       {renderCcModal()}
       {renderTemplateChangeConfirmModal()}
-      {renderPasswordTemplateModal()}
+      {renderPasswordEmailModal()}
       {renderDeleteConfirmModal()}
       {renderAttachmentDeleteConfirmModal()}
       {renderLeaveConfirmModal()}

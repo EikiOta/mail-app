@@ -1,6 +1,7 @@
 // src/components/ConfirmPage.js
 import React, { useState, useEffect } from 'react';
 import { Modal } from './common/Modal';
+import Pagination from './common/Pagination';
 
 const ConfirmPage = ({ 
   mailData, 
@@ -14,9 +15,12 @@ const ConfirmPage = ({
   const [recipientGreetings, setRecipientGreetings] = useState({});
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [previewRecipient, setPreviewRecipient] = useState(null);
-  const [showPasswordEmailPreview, setShowPasswordEmailPreview] = useState(false);
   const [canceled, setCanceled] = useState(false);
   const [intervalId, setIntervalId] = useState(null);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [leavePage, setLeavePage] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // コンポーネントがマウントされた時に、各宛先ごとの挨拶文を初期化
   useEffect(() => {
@@ -31,6 +35,93 @@ const ConfirmPage = ({
     
     setRecipientGreetings(greetings);
   }, [selectedRecipients]);
+
+  // Navigation.jsのonPageChange経由の遷移を検知
+  useEffect(() => {
+    // オリジナルのナビゲーション関数を保存
+    const originalNavigateToPage = window.navigateToPage;
+    
+    // ナビゲーション関数をオーバーライド
+    window.navigateToPage = (page) => {
+      // 「編集に戻る」または「送信実行」以外の遷移時に警告
+      if (page !== 'mail-compose' && page !== 'result') {
+        setLeavePage(page);
+        setShowLeaveConfirm(true);
+      } else {
+        // mail-compose か result への遷移は許可
+        originalNavigateToPage(page);
+      }
+    };
+    
+    // クリーンアップ関数
+    return () => {
+      // ナビゲーション関数を元に戻す
+      window.navigateToPage = originalNavigateToPage;
+    };
+  }, []);
+
+  // ハッシュの変更を監視してページ遷移を検知
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.substring(1);
+      if (hash && hash !== 'confirm') {
+        // 「編集に戻る」または「送信実行」以外の遷移時に警告
+        if (hash !== 'mail-compose' && hash !== 'result') {
+          setLeavePage(hash);
+          setShowLeaveConfirm(true);
+        } else {
+          // mail-compose か result への遷移は警告なしで許可
+          if (typeof window.navigateToPage === 'function') {
+            window.navigateToPage(hash);
+          } else {
+            window.location.href = '#' + hash;
+          }
+        }
+      }
+    };
+    
+    window.addEventListener('hashchange', handleHashChange);
+    
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, []);
+
+  // ページ離脱時の警告設定
+  useEffect(() => {
+    // beforeunload イベントハンドラ
+    const handleBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = '';
+      return '';
+    };
+    
+    // イベントリスナーを追加
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    // クリーンアップ関数
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
+
+  // 実際のページ遷移処理
+  const executeLeavePage = () => {
+    setShowLeaveConfirm(false);
+    
+    // App.jsのsetCurrentPageにページ情報を渡す
+    if (typeof window.navigateToPage === 'function') {
+      // 直接window.navigateToPageを呼び出すのではなく、
+      // ハッシュを変更してApp.jsのイベントハンドラに検知させる
+      window.location.hash = ''; // 現在のハッシュをクリア
+      setTimeout(() => {
+        window.location.hash = 'direct-' + leavePage; // 特殊なプレフィックスを追加
+      }, 50);
+    } else {
+      // fallback - 直接画面遷移（通常は使用されない）
+      window.location.href = '#' + leavePage;
+    }
+  };
 
   // クリーンアップ関数
   useEffect(() => {
@@ -118,9 +209,11 @@ const ConfirmPage = ({
     setPreviewModalOpen(true);
   };
 
-  // パスワード通知メールプレビューを表示
+  // パスワード通知メールの内容を取得
   const getPasswordEmailContent = (recipient) => {
-    if (!mailData.compressionSettings || 
+    if (!mailData.attachments || 
+        mailData.attachments.length === 0 ||
+        !mailData.compressionSettings || 
         mailData.compressionSettings.type !== 'password' || 
         !mailData.compressionSettings.sendPasswordEmail) {
       return null;
@@ -131,6 +224,12 @@ const ConfirmPage = ({
       .replace('<<会社名>>', recipient.company)
       .replace('<<宛先名>>', recipient.name)
       .replace('<<パスワード>>', mailData.compressionSettings.password || 'a8Xp2Z');
+  };
+
+  // サンプル宛先でパスワード通知メールの内容を表示
+  const getPasswordEmailSample = () => {
+    const sampleRecipient = selectedRecipients[0] || { company: '株式会社サンプル', name: '山田 太郎' };
+    return getPasswordEmailContent(sampleRecipient);
   };
 
   // 添付ファイル情報の表示
@@ -267,56 +366,58 @@ const ConfirmPage = ({
     );
   };
 
-  // パスワード通知メールをプレビュー表示するモーダル
-  const renderPasswordEmailPreviewModal = () => {
-    if (!mailData.compressionSettings || 
-        mailData.compressionSettings.type !== 'password' || 
-        !mailData.compressionSettings.sendPasswordEmail) {
-      return null;
-    }
-
-    // サンプル宛先を使ってプレビュー
-    const sampleRecipient = selectedRecipients[0] || { company: '株式会社サンプル', name: '山田 太郎' };
-    const previewContent = getPasswordEmailContent(sampleRecipient);
+  // ページ離脱確認モーダルのレンダリング
+  const renderLeaveConfirmModal = () => {
+    if (!showLeaveConfirm) return null;
     
     return (
-      <Modal onClose={() => setShowPasswordEmailPreview(false)}>
+      <Modal onClose={() => setShowLeaveConfirm(false)}>
         <div className="modal-header">
-          <h3 className="modal-title">パスワード通知メールプレビュー</h3>
+          <h3 className="modal-title">ページ移動確認</h3>
         </div>
         
         <div className="modal-body">
-          <p>各宛先に以下のフォーマットでパスワード通知メールが送信されます。</p>
-          
-          <div className="confirmation-section" style={{ border: 'none', padding: '0' }}>
-            <div className="confirmation-label">プレビュー例</div>
-            <div className="confirmation-value" style={{ 
-              whiteSpace: 'pre-line', 
-              backgroundColor: '#f9f9f9',
-              padding: '15px',
-              borderRadius: '4px',
-              border: '1px solid #e0e0e0'
-            }}>
-              {previewContent}
-            </div>
-          </div>
-          
-          <p className="note" style={{ fontSize: '14px', color: '#666', marginTop: '15px' }}>
-            ※ 実際には各宛先の情報（会社名、担当者名）が自動的に挿入されます。
-          </p>
+          <p>送信確認中のメールは破棄されます。よろしいですか？</p>
         </div>
         
         <div className="modal-footer">
-          <button className="action-btn" onClick={() => setShowPasswordEmailPreview(false)}>閉じる</button>
+          <button 
+            className="cancel-btn"
+            onClick={() => setShowLeaveConfirm(false)}
+          >
+            キャンセル
+          </button>
+          <button 
+            className="confirm-btn"
+            onClick={executeLeavePage}
+          >
+            移動する
+          </button>
         </div>
       </Modal>
     );
   };
 
-  // パスワード通知が有効かどうか
-  const hasPasswordEmail = mailData.compressionSettings && 
+  // ページング用の関数
+  const getPaginatedRecipients = () => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = Math.min(startIndex + itemsPerPage, selectedRecipients.length);
+    return selectedRecipients.slice(startIndex, endIndex);
+  };
+
+  // パスワード通知が有効かどうか - 添付ファイルの有無もチェック
+  const hasPasswordEmail = mailData.attachments && 
+                        mailData.attachments.length > 0 &&
+                        mailData.compressionSettings && 
                         mailData.compressionSettings.type === 'password' && 
                         mailData.compressionSettings.sendPasswordEmail;
+
+  // パスワード通知メールのサンプル内容
+  const passwordEmailSample = getPasswordEmailSample();
+
+  // 送信先一覧をデバッグ
+  console.log("Selected Recipients:", selectedRecipients);
+  console.log("Paginated Recipients:", getPaginatedRecipients());
 
   return (
     <div className="container" id="confirm-page">
@@ -344,25 +445,23 @@ const ConfirmPage = ({
         </div>
       </div>
       
+      {/* パスワード通知メールを直接表示する方式に変更 */}
       {hasPasswordEmail && (
         <div className="confirmation-section">
-          <div className="confirmation-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>パスワード通知メール</span>
-            <button 
-              className="log-details-btn"
-              onClick={() => setShowPasswordEmailPreview(true)}
-              style={{ 
-                backgroundColor: '#e8f5fe', 
-                border: '1px solid #3498db',
-                color: '#2980b9',
-                fontSize: '12px'
-              }}
-            >
-              プレビュー表示
-            </button>
-          </div>
-          <div className="confirmation-value" style={{ color: '#666' }}>
-            添付ファイルのパスワードを別メールで各宛先に送信します。
+          <div className="confirmation-label">パスワード通知メール</div>
+          <div className="confirmation-value">
+            <div style={{ 
+              whiteSpace: 'pre-line',
+              backgroundColor: '#f9f9f9',
+              padding: '15px',
+              borderRadius: '4px',
+              border: '1px solid #e0e0e0'
+            }}>
+              {passwordEmailSample}
+            </div>
+            <p style={{ fontSize: '14px', color: '#666', marginTop: '10px' }}>
+              ※ 各宛先ごとに会社名、担当者名が自動的に挿入されます。
+            </p>
           </div>
         </div>
       )}
@@ -370,80 +469,104 @@ const ConfirmPage = ({
       <div className="confirmation-section">
         <div className="confirmation-label">送信先 (合計: {selectedRecipients.length}件)</div>
         <div className="confirmation-value confirmation-recipients">
-          <table className="recipients-table">
-            <thead>
-              <tr>
-                <th width="5%">No</th>
-                <th width="15%">宛先(To)</th>
-                <th width="15%">会社名</th>
-                <th width="25%">挨拶文</th>
-                <th width="25%">CC</th>
-                <th width="15%"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {selectedRecipients.map((recipient, index) => (
-                <tr key={recipient.id}>
-                  <td>{index + 1}</td>
-                  <td>{recipient.name}</td>
-                  <td>{recipient.company}</td>
-                  <td>
-                    <div style={{ 
-                      maxHeight: '60px', 
-                      overflow: 'hidden'
-                      // position: 'relative' を削除
-                    }}>
-                      <div style={{ whiteSpace: 'pre-line' }}>
-                        {recipientGreetings[recipient.id]}
-                      </div>
-                      {/* フェードアウト効果のための背景グラデーションを削除 */}
-                    </div>
-                    <button 
-                      className="log-details-btn" 
-                      style={{ marginTop: '5px' }}
-                      onClick={() => {
-                        const newGreeting = prompt(
-                          '挨拶文を編集してください', 
-                          recipientGreetings[recipient.id]
-                        );
-                        if (newGreeting !== null) {
-                          handleGreetingChange(recipient.id, newGreeting);
-                        }
-                      }}
-                    >
-                      編集
-                    </button>
-                  </td>
-                  <td>
-                    <div className="cc-tags">
-                      {recipient.cc.map((cc, ccIndex) => (
-                        <span key={ccIndex} className="cc-tag">
-                          {cc.name}
-                        </span>
-                      ))}
-                      {recipient.cc.length === 0 && (
-                        <span className="no-cc">なし</span>
-                      )}
-                    </div>
-                  </td>
-                  <td>
-                    <button 
-                      className="log-details-btn"
-                      onClick={() => openPreviewModal(recipient)}
-                    >
-                      プレビュー
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {selectedRecipients.length > 0 ? (
+            <>
+              <table className="recipients-table">
+                <thead>
+                  <tr>
+                    <th width="5%">No</th>
+                    <th width="15%">宛先(To)</th>
+                    <th width="15%">会社名</th>
+                    <th width="25%">挨拶文</th>
+                    <th width="25%">CC</th>
+                    <th width="15%"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {getPaginatedRecipients().map((recipient, index) => (
+                    <tr key={recipient.id}>
+                      <td>{(currentPage - 1) * itemsPerPage + index + 1}</td>
+                      <td>{recipient.name}</td>
+                      <td>{recipient.company}</td>
+                      <td>
+                        <div style={{ 
+                          maxHeight: '60px', 
+                          overflow: 'hidden'
+                        }}>
+                          <div style={{ whiteSpace: 'pre-line' }}>
+                            {recipientGreetings[recipient.id]}
+                          </div>
+                        </div>
+                        <button 
+                          className="log-details-btn" 
+                          style={{ marginTop: '5px' }}
+                          onClick={() => {
+                            const newGreeting = prompt(
+                              '挨拶文を編集してください', 
+                              recipientGreetings[recipient.id]
+                            );
+                            if (newGreeting !== null) {
+                              handleGreetingChange(recipient.id, newGreeting);
+                            }
+                          }}
+                        >
+                          編集
+                        </button>
+                      </td>
+                      <td>
+                        <div className="cc-tags">
+                          {recipient.cc && recipient.cc.length > 0 ? (
+                            recipient.cc.map((cc, ccIndex) => (
+                              <span key={ccIndex} className="cc-tag">
+                                {cc.name}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="no-cc">なし</span>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <button 
+                          className="log-details-btn"
+                          onClick={() => openPreviewModal(recipient)}
+                        >
+                          プレビュー
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* ページネーション */}
+              {selectedRecipients.length > itemsPerPage && (
+                <Pagination 
+                  currentPage={currentPage}
+                  totalItems={selectedRecipients.length}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setCurrentPage}
+                  noScroll={true}
+                />
+              )}
+            </>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
+              送信先が選択されていません。メール作成画面で送信先を選択してください。
+            </div>
+          )}
         </div>
       </div>
       
       <div className="confirmation-footer">
         <button className="action-btn" onClick={onBack}>編集に戻る</button>
-        <button className="action-btn success" onClick={executeSend}>送信実行</button>
+        <button 
+          className="action-btn success" 
+          onClick={executeSend}
+          disabled={selectedRecipients.length === 0}
+        >
+          送信実行
+        </button>
       </div>
       
       {/* 送信プログレスモーダル */}
@@ -452,10 +575,20 @@ const ConfirmPage = ({
       {/* メールプレビューモーダル */}
       {previewModalOpen && renderPreviewModal()}
 
-      {/* パスワード通知メールプレビューモーダル */}
-      {showPasswordEmailPreview && renderPasswordEmailPreviewModal()}
+      {/* ページ離脱確認モーダル */}
+      {showLeaveConfirm && renderLeaveConfirmModal()}
     </div>
   );
+};
+
+// ページ遷移の確認メソッドをエクスポート（App.jsから呼び出せるように）
+ConfirmPage.handlePageNavigation = (page) => {
+  // このメソッドはApp.jsから呼ばれる予定
+  if (page !== 'mail-compose' && page !== 'result') {
+    // ここでモーダルを表示したいが、静的メソッドなのでstateにアクセスできない
+    return false; // 遷移を中止（App.jsがこの結果を使って警告モーダルを表示する）
+  }
+  return true; // 通常通り遷移
 };
 
 export default ConfirmPage;
