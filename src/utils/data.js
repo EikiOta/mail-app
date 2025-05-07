@@ -67,7 +67,7 @@ export const generateDummyContacts = (count) => {
     ...contact,
     id: index + 1,
     cc: [],
-    selected: index < 3 // 最初の3件は選択済みに
+    selected: false // 初期状態では選択なしに変更
   }));
 };
 

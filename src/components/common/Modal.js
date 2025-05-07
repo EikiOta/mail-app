@@ -1,7 +1,7 @@
 // src/components/common/Modal.js
 import React, { useEffect } from 'react';
 
-export const Modal = ({ children, onClose, fullWidth = false, maxWidth = '500px' }) => {
+export const Modal = ({ children, onClose, fullWidth = false, maxWidth = '500px', fixedHeight = false }) => {
   // ESCキーでモーダルを閉じる
   useEffect(() => {
     const handleEscape = (e) => {
@@ -28,7 +28,13 @@ export const Modal = ({ children, onClose, fullWidth = false, maxWidth = '500px'
       <div 
         className="modal-content" 
         onClick={(e) => e.stopPropagation()}
-        style={fullWidth ? { maxWidth: maxWidth, width: '90%', maxHeight: '90vh', overflowY: 'auto' } : {}}
+        style={
+          fullWidth 
+            ? { maxWidth: maxWidth, width: '90%', maxHeight: '90vh', overflowY: 'auto' }
+            : fixedHeight
+              ? { maxHeight: '550px', overflowY: 'hidden' }
+              : {}
+        }
       >
         {children}
       </div>

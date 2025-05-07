@@ -18,6 +18,8 @@ const MailCompose = ({
   const [showPasswordTemplateModal, setShowPasswordTemplateModal] = useState(false);
   const [showTemplateChangeConfirm, setShowTemplateChangeConfirm] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [showAttachmentDeleteConfirm, setShowAttachmentDeleteConfirm] = useState(false);
+  const [attachmentToDelete, setAttachmentToDelete] = useState(null);
   const [leavePage, setLeavePage] = useState('');
   const [selectedTemplateId, setSelectedTemplateId] = useState(null);
   const [currentRecipientId, setCurrentRecipientId] = useState(null);
@@ -63,7 +65,11 @@ const MailCompose = ({
           setShowLeaveConfirm(true);
         } else {
           // 内容がなければそのまま遷移
-          window.location.href = hash;
+          if (typeof window.navigateToPage === 'function') {
+            window.navigateToPage(hash);
+          } else {
+            window.location.href = '#' + hash;
+          }
         }
       }
     };
@@ -204,9 +210,19 @@ const MailCompose = ({
     }
   };
 
+  // 添付ファイル削除確認ダイアログを表示
+  const confirmAttachmentDelete = (index) => {
+    setAttachmentToDelete(index);
+    setShowAttachmentDeleteConfirm(true);
+  };
+
   // 添付ファイル削除時の処理
-  const removeAttachment = (index) => {
-    setAttachments(attachments.filter((_, i) => i !== index));
+  const removeAttachment = () => {
+    if (attachmentToDelete !== null) {
+      setAttachments(attachments.filter((_, i) => i !== attachmentToDelete));
+      setAttachmentToDelete(null);
+      setShowAttachmentDeleteConfirm(false);
+    }
   };
 
   // 全選択/解除の処理
@@ -252,8 +268,8 @@ const MailCompose = ({
     const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
     let password = '';
     
-    // 8文字のランダムパスワードを生成
-    const length = 8;
+    // 6~12文字のランダムパスワードを生成
+    const length = Math.floor(Math.random() * 7) + 6; // 6~12文字のランダムな長さ
     
     for (let i = 0; i < length; i++) {
       const randomIndex = Math.floor(Math.random() * charset.length);
@@ -271,7 +287,7 @@ const MailCompose = ({
   const validatePassword = (e) => {
     const inputValue = e.target.value;
     
-    // 英数字と記号の12文字以下にバリデーション
+    // 6~12文字の半角英数字記号にバリデーション
     if (inputValue.length > 12) {
       e.target.value = inputValue.slice(0, 12);
     }
@@ -642,12 +658,12 @@ const MailCompose = ({
     const paginatedContacts = filteredContacts.slice(startIndex, endIndex);
     
     return (
-      <Modal onClose={closeCcModal}>
+      <Modal onClose={closeCcModal} fixedHeight={true}>
         <div className="modal-header" style={{ borderBottom: '1px solid #e0e0e0', paddingBottom: '15px', marginBottom: '15px' }}>
           <h3 className="modal-title">CCを追加</h3>
         </div>
         
-        <div className="modal-body">
+        <div className="modal-body" style={{ height: '400px', overflowY: 'auto' }}>
           <p style={{ marginBottom: '15px' }}>
             {recipient.name} ({recipient.company})宛のメールにCCを追加します。
           </p>
@@ -695,7 +711,7 @@ const MailCompose = ({
             </div>
           </div>
           
-          <div>
+          <div style={{ minHeight: '200px' }}>
             <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>CC候補:</div>
             
             {paginatedContacts.length > 0 ? (
@@ -922,6 +938,43 @@ const MailCompose = ({
     );
   };
 
+  // 添付ファイル削除確認モーダルのレンダリング
+  const renderAttachmentDeleteConfirmModal = () => {
+    if (!showAttachmentDeleteConfirm) return null;
+    
+    const attachment = attachments[attachmentToDelete];
+    if (!attachment) return null;
+    
+    return (
+      <Modal onClose={() => setShowAttachmentDeleteConfirm(false)}>
+        <div className="modal-header">
+          <h3 className="modal-title">添付ファイル削除確認</h3>
+        </div>
+        
+        <div className="modal-body">
+          <p>
+            <strong>{attachment.name}</strong> を削除してもよろしいですか？
+          </p>
+        </div>
+        
+        <div className="modal-footer">
+          <button 
+            className="cancel-btn"
+            onClick={() => setShowAttachmentDeleteConfirm(false)}
+          >
+            キャンセル
+          </button>
+          <button 
+            className="confirm-btn"
+            onClick={removeAttachment}
+          >
+            削除
+          </button>
+        </div>
+      </Modal>
+    );
+  };
+
   // ページ離脱確認モーダルのレンダリング
   const renderLeaveConfirmModal = () => {
     if (!showLeaveConfirm) return null;
@@ -1031,7 +1084,7 @@ const MailCompose = ({
                   <div className="attachment-actions">
                     <button 
                       className="log-details-btn remove-attachment-btn"
-                      onClick={() => removeAttachment(index)}
+                      onClick={() => confirmAttachmentDelete(index)}
                     >
                       削除
                     </button>
@@ -1070,7 +1123,7 @@ const MailCompose = ({
               </div>
               
               <div className={`form-section ${compressionType !== 'password' || !hasAttachments ? 'disabled' : ''}`} id="password-section">
-                <label>パスワード（英数字12文字以内）</label>
+                <label>パスワード（6~12文字の半角英数字記号）</label>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <input 
                     type="text" 
@@ -1176,6 +1229,7 @@ const MailCompose = ({
       {renderTemplateChangeConfirmModal()}
       {renderPasswordTemplateModal()}
       {renderDeleteConfirmModal()}
+      {renderAttachmentDeleteConfirmModal()}
       {renderLeaveConfirmModal()}
     </div>
   );
