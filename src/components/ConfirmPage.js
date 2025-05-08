@@ -11,6 +11,7 @@ const ConfirmPage = ({
 }) => {
   const [showSendingModal, setShowSendingModal] = useState(false);
   const [showSendConfirmModal, setShowSendConfirmModal] = useState(false);
+  const [showCancelConfirmModal, setShowCancelConfirmModal] = useState(false); // 送信中止確認モーダル用の状態
   const [progress, setProgress] = useState(0);
   const [processed, setProcessed] = useState(0);
   const [recipientGreetings, setRecipientGreetings] = useState({});
@@ -213,22 +214,26 @@ const ConfirmPage = ({
     setIntervalId(interval);
   };
 
-  // 送信中止の処理 - 即座に中断するように修正
+  // 送信中止確認モーダルを表示
   const cancelSending = () => {
-    if (window.confirm('送信を中止してもよろしいですか？')) {
-      // 現在のインターバルをクリアして処理を停止
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-      
-      setCanceled(true);
-      
-      // 直ちに送信モーダルを閉じる
-      setShowSendingModal(false);
-      
-      // 現在のprocessed数を使って結果画面へ遷移
-      onSend(processed);
+    setShowCancelConfirmModal(true);
+  };
+
+  // 実際に送信を中止する処理
+  const executeCancelSending = () => {
+    // 現在のインターバルをクリアして処理を停止
+    if (intervalId) {
+      clearInterval(intervalId);
     }
+    
+    setCanceled(true);
+    setShowCancelConfirmModal(false);
+    
+    // 直ちに送信モーダルを閉じる
+    setShowSendingModal(false);
+    
+    // 現在のprocessed数を使って結果画面へ遷移
+    onSend(processed);
   };
 
   // プレビューモーダルを開く
@@ -338,6 +343,37 @@ const ConfirmPage = ({
             onClick={executeSend}
           >
             送信する
+          </button>
+        </div>
+      </Modal>
+    );
+  };
+
+  // 送信中止確認モーダルのレンダリング
+  const renderCancelConfirmModal = () => {
+    return (
+      <Modal onClose={() => setShowCancelConfirmModal(false)}>
+        <div className="modal-header">
+          <h3 className="modal-title">送信中止確認</h3>
+        </div>
+        <div className="modal-body">
+          <p>送信を中止してもよろしいですか？</p>
+          <p style={{ color: '#666', fontSize: '14px' }}>
+            中止した場合、現在までに送信されたメール（{processed}件）はキャンセルできません。
+          </p>
+        </div>
+        <div className="modal-footer">
+          <button 
+            className="cancel-btn"
+            onClick={() => setShowCancelConfirmModal(false)}
+          >
+            キャンセル
+          </button>
+          <button 
+            className="confirm-btn warning"
+            onClick={executeCancelSending}
+          >
+            送信中止
           </button>
         </div>
       </Modal>
@@ -677,6 +713,9 @@ const ConfirmPage = ({
       
       {/* 送信確認モーダル */}
       {showSendConfirmModal && renderSendConfirmModal()}
+      
+      {/* 送信中止確認モーダル */}
+      {showCancelConfirmModal && renderCancelConfirmModal()}
       
       {/* 送信プログレスモーダル */}
       {showSendingModal && renderSendingProgressModal()}
