@@ -134,11 +134,15 @@ const MailCompose = ({
     
     // App.jsのsetCurrentPageにページ情報を渡す
     if (typeof window.navigateToPage === 'function') {
-      window.navigateToPage(leavePage);
+      // 直接window.navigateToPageを呼び出すのではなく、
+      // ハッシュを変更してApp.jsのイベントハンドラに検知させる
+      window.location.hash = ''; // 現在のハッシュをクリア
+      setTimeout(() => {
+        window.location.hash = 'direct-' + leavePage; // 特殊なプレフィックスを追加
+      }, 50);
     } else {
-      // fallback - 直接URLのハッシュを変更
-      window.location.hash = leavePage;
-      window.location.reload();
+      // fallback - 直接画面遷移（通常は使用されない）
+      window.location.href = '#' + leavePage;
     }
   };
 
