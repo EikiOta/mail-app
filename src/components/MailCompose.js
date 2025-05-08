@@ -13,7 +13,6 @@ const MailCompose = ({
   setMailData
 }) => {
   // 状態管理の変数宣言部分は省略...
-  const [attachments, setAttachments] = useState([]);
   const [showCcModal, setShowCcModal] = useState(false);
   const [showPasswordEmailModal, setShowPasswordEmailModal] = useState(false);
   const [showTemplateChangeConfirm, setShowTemplateChangeConfirm] = useState(false);
@@ -47,11 +46,22 @@ const MailCompose = ({
   const itemsPerPage = 10;
   const ccItemsPerPage = 5; // CC候補は1ページ5人に設定
 
+  // App.jsから渡されたmailData.attachmentsを直接使用
+  const attachments = mailData.attachments || [];
+
   // 選択された受信者のみを取得
   const selectedRecipients = recipients.filter(r => r.selected);
 
   // 添付ファイルがあるかどうか
   const hasAttachments = attachments.length > 0;
+
+  useEffect(() => {
+    // 初期化時にコンポーネント内の圧縮設定をmailDataから設定
+    if (mailData.compressionSettings) {
+      setCompressionType(mailData.compressionSettings.type || 'password');
+      setPasswordEmail(mailData.compressionSettings.passwordEmailTemplate || passwordEmail);
+    }
+  }, []);
 
   // ハッシュの変更を監視してページ遷移を検知
   useEffect(() => {
@@ -202,11 +212,15 @@ const MailCompose = ({
         sizeStr = Math.round(fileSize / (1024 * 1024) * 10) / 10 + ' MB';
       }
       
-      setAttachments([...attachments, {
-        name: file.name,
-        size: sizeStr,
-        file
-      }]);
+      // mailData.attachmentsを更新
+      setMailData({
+        ...mailData,
+        attachments: [...attachments, {
+          name: file.name,
+          size: sizeStr,
+          file
+        }]
+      });
     }
   };
 
@@ -219,7 +233,11 @@ const MailCompose = ({
   // 添付ファイル削除時の処理
   const removeAttachment = () => {
     if (attachmentToDelete !== null) {
-      setAttachments(attachments.filter((_, i) => i !== attachmentToDelete));
+      // mailData.attachmentsから削除
+      setMailData({
+        ...mailData,
+        attachments: attachments.filter((_, i) => i !== attachmentToDelete)
+      });
       setAttachmentToDelete(null);
       setShowAttachmentDeleteConfirm(false);
     }
@@ -505,20 +523,24 @@ const MailCompose = ({
               </td>
               <td>
                 <div className="cc-tags">
-                  {recipient.cc.map((cc, ccIndex) => (
-                    <span key={ccIndex} className="cc-tag" data-email={cc.email}>
-                      {cc.name}
-                      <span 
-                        className="remove-cc" 
-                        onClick={() => {
-                          const newCcList = recipient.cc.filter((_, i) => i !== ccIndex);
-                          addCc(recipient.id, newCcList);
-                        }}
-                      >
-                        &times;
+                  {recipient.cc && recipient.cc.length > 0 ? (
+                    recipient.cc.map((cc, ccIndex) => (
+                      <span key={ccIndex} className="cc-tag" data-email={cc.email}>
+                        {cc.name}
+                        <span 
+                          className="remove-cc" 
+                          onClick={() => {
+                            const newCcList = recipient.cc.filter((_, i) => i !== ccIndex);
+                            addCc(recipient.id, newCcList);
+                          }}
+                        >
+                          &times;
+                        </span>
                       </span>
-                    </span>
-                  ))}
+                    ))
+                  ) : (
+                    <span className="no-cc">なし</span>
+                  )}
                 </div>
               </td>
               <td>
@@ -1128,7 +1150,7 @@ const MailCompose = ({
                   <input 
                     type="text" 
                     id="attachment-password" 
-                    defaultValue="a8Xp2Z" 
+                    defaultValue={mailData.compressionSettings?.password || "a8Xp2Z"}
                     style={{ flex: 1 }}
                     onInput={validatePassword}
                     disabled={compressionType !== 'password' || !hasAttachments}
@@ -1150,7 +1172,7 @@ const MailCompose = ({
                     <input 
                       type="checkbox" 
                       id="send-password-email" 
-                      defaultChecked 
+                      defaultChecked={mailData.compressionSettings?.sendPasswordEmail !== false}
                       style={{ marginRight: '10px', width: 'auto' }}
                       disabled={compressionType !== 'password' || !hasAttachments}
                     />

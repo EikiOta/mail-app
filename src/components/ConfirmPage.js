@@ -20,6 +20,9 @@ const ConfirmPage = ({
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [leavePage, setLeavePage] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [showEditGreetingModal, setShowEditGreetingModal] = useState(false);
+  const [currentEditingRecipient, setCurrentEditingRecipient] = useState(null);
+  const [editingGreeting, setEditingGreeting] = useState('');
   const itemsPerPage = 10;
 
   // コンポーネントがマウントされた時に、各宛先ごとの挨拶文を初期化
@@ -131,6 +134,24 @@ const ConfirmPage = ({
       }
     };
   }, [intervalId]);
+
+  // 挨拶文の編集モーダルを開く
+  const openEditGreetingModal = (recipientId) => {
+    const recipient = selectedRecipients.find(r => r.id === recipientId);
+    if (recipient) {
+      setCurrentEditingRecipient(recipient);
+      setEditingGreeting(recipientGreetings[recipientId] || '');
+      setShowEditGreetingModal(true);
+    }
+  };
+
+  // 挨拶文の編集を保存
+  const saveEditedGreeting = () => {
+    if (currentEditingRecipient && editingGreeting !== null) {
+      handleGreetingChange(currentEditingRecipient.id, editingGreeting);
+    }
+    setShowEditGreetingModal(false);
+  };
 
   // 挨拶文の変更を処理する関数
   const handleGreetingChange = (recipientId, newGreeting) => {
@@ -366,6 +387,50 @@ const ConfirmPage = ({
     );
   };
 
+  // 挨拶文編集モーダルの表示
+  const renderEditGreetingModal = () => {
+    if (!showEditGreetingModal || !currentEditingRecipient) return null;
+    
+    return (
+      <Modal onClose={() => setShowEditGreetingModal(false)}>
+        <div className="modal-header">
+          <h3 className="modal-title">挨拶文の編集</h3>
+        </div>
+        <div className="modal-body">
+          <p>
+            <strong>{currentEditingRecipient.name}</strong> ({currentEditingRecipient.company})宛の挨拶文を編集します。
+          </p>
+          <textarea
+            style={{ 
+              width: '100%', 
+              minHeight: '150px', 
+              padding: '10px',
+              borderRadius: '4px',
+              border: '1px solid #e0e0e0',
+              marginTop: '10px' 
+            }}
+            value={editingGreeting}
+            onChange={(e) => setEditingGreeting(e.target.value)}
+          />
+        </div>
+        <div className="modal-footer">
+          <button 
+            className="cancel-btn"
+            onClick={() => setShowEditGreetingModal(false)}
+          >
+            キャンセル
+          </button>
+          <button 
+            className="confirm-btn"
+            onClick={saveEditedGreeting}
+          >
+            保存
+          </button>
+        </div>
+      </Modal>
+    );
+  };
+
   // ページ離脱確認モーダルのレンダリング
   const renderLeaveConfirmModal = () => {
     if (!showLeaveConfirm) return null;
@@ -500,15 +565,7 @@ const ConfirmPage = ({
                         <button 
                           className="log-details-btn" 
                           style={{ marginTop: '5px' }}
-                          onClick={() => {
-                            const newGreeting = prompt(
-                              '挨拶文を編集してください', 
-                              recipientGreetings[recipient.id]
-                            );
-                            if (newGreeting !== null) {
-                              handleGreetingChange(recipient.id, newGreeting);
-                            }
-                          }}
+                          onClick={() => openEditGreetingModal(recipient.id)}
                         >
                           編集
                         </button>
@@ -574,6 +631,9 @@ const ConfirmPage = ({
       
       {/* メールプレビューモーダル */}
       {previewModalOpen && renderPreviewModal()}
+      
+      {/* 挨拶文編集モーダル */}
+      {renderEditGreetingModal()}
 
       {/* ページ離脱確認モーダル */}
       {showLeaveConfirm && renderLeaveConfirmModal()}
