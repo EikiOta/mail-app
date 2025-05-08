@@ -1,5 +1,5 @@
 // src/components/ConfirmPage.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Modal } from './common/Modal';
 import Pagination from './common/Pagination';
 
@@ -18,6 +18,7 @@ const ConfirmPage = ({
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [previewRecipient, setPreviewRecipient] = useState(null);
   const [canceled, setCanceled] = useState(false);
+  const [paused, setPaused] = useState(false); // 送信一時停止フラグを追加
   const [intervalId, setIntervalId] = useState(null);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [leavePage, setLeavePage] = useState('');
@@ -25,6 +26,13 @@ const ConfirmPage = ({
   const [showEditGreetingModal, setShowEditGreetingModal] = useState(false);
   const [currentEditingRecipient, setCurrentEditingRecipient] = useState(null);
   const [editingGreeting, setEditingGreeting] = useState('');
+  
+  // 送信処理の状態を保持するためのref
+  const sendingStateRef = useRef({
+    totalCount: 0,
+    lastProcessedCount: 0
+  });
+  
   const itemsPerPage = 10;
 
   // コンポーネントがマウントされた時に、各宛先ごとの挨拶文を初期化
@@ -110,6 +118,15 @@ const ConfirmPage = ({
     };
   }, []);
 
+  // クリーンアップ関数
+  useEffect(() => {
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [intervalId]);
+
   // 実際のページ遷移処理
   const executeLeavePage = () => {
     setShowLeaveConfirm(false);
@@ -127,15 +144,6 @@ const ConfirmPage = ({
       window.location.href = '#' + leavePage;
     }
   };
-
-  // クリーンアップ関数
-  useEffect(() => {
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
-  }, [intervalId]);
 
   // 挨拶文の編集モーダルを開く
   const openEditGreetingModal = (recipientId) => {
@@ -168,17 +176,21 @@ const ConfirmPage = ({
     setShowSendConfirmModal(true);
   };
 
-  // 送信実行時の処理
-  const executeSend = () => {
-    setShowSendConfirmModal(false);
-    setShowSendingModal(true);
-    setProgress(0);
-    setProcessed(0);
-    setCanceled(false);
+  // 送信処理用インターバルを開始する関数
+  const startSendingInterval = (initialCount = 0) => {
+    // 現在のインターバルがあればクリア
+    if (intervalId) {
+      clearInterval(intervalId);
+    }
     
-    // 送信プロセスをシミュレート
     const totalCount = selectedRecipients.length;
-    let count = 0;
+    let count = initialCount;
+    
+    // 状態をrefに保存
+    sendingStateRef.current = {
+      totalCount,
+      lastProcessedCount: count
+    };
     
     const interval = setInterval(() => {
       // キャンセルされた場合、処理を中断
@@ -199,6 +211,9 @@ const ConfirmPage = ({
       setProgress(percent);
       setProcessed(count);
       
+      // refの状態も更新
+      sendingStateRef.current.lastProcessedCount = count;
+      
       if (count >= totalCount) {
         clearInterval(interval);
         
@@ -212,11 +227,49 @@ const ConfirmPage = ({
     
     // インターバルIDを保存して後でクリーンアップできるようにする
     setIntervalId(interval);
+    
+    return interval;
   };
 
-  // 送信中止確認モーダルを表示
+  // 送信実行時の処理
+  const executeSend = () => {
+    setShowSendConfirmModal(false);
+    setShowSendingModal(true);
+    setProgress(0);
+    setProcessed(0);
+    setCanceled(false);
+    setPaused(false);
+    
+    // 送信処理を開始
+    startSendingInterval(0);
+  };
+
+  // 送信中止確認モーダルを表示し、送信を一時停止する
   const cancelSending = () => {
+    // 現在のインターバルを停止（一時停止）
+    if (intervalId) {
+      clearInterval(intervalId);
+      setIntervalId(null);
+    }
+    
+    // 一時停止状態に設定
+    setPaused(true);
+    
+    // 送信中止確認モーダルを表示
     setShowCancelConfirmModal(true);
+  };
+
+  // 送信中止をキャンセルして送信を再開する処理
+  const resumeSending = () => {
+    // 送信中止確認モーダルを閉じる
+    setShowCancelConfirmModal(false);
+    
+    // 送信を再開
+    setPaused(false);
+    
+    // 保存された状態から処理を再開
+    const lastCount = sendingStateRef.current.lastProcessedCount;
+    startSendingInterval(lastCount);
   };
 
   // 実際に送信を中止する処理
@@ -224,8 +277,10 @@ const ConfirmPage = ({
     // 現在のインターバルをクリアして処理を停止
     if (intervalId) {
       clearInterval(intervalId);
+      setIntervalId(null);
     }
     
+    setPaused(false);
     setCanceled(true);
     setShowCancelConfirmModal(false);
     
@@ -352,7 +407,7 @@ const ConfirmPage = ({
   // 送信中止確認モーダルのレンダリング
   const renderCancelConfirmModal = () => {
     return (
-      <Modal onClose={() => setShowCancelConfirmModal(false)}>
+      <Modal onClose={resumeSending} highZIndex={true}>
         <div className="modal-header">
           <h3 className="modal-title">送信中止確認</h3>
         </div>
@@ -361,11 +416,22 @@ const ConfirmPage = ({
           <p style={{ color: '#666', fontSize: '14px' }}>
             中止した場合、現在までに送信されたメール（{processed}件）はキャンセルできません。
           </p>
+          <div style={{ 
+            backgroundColor: '#f8f9fa', 
+            padding: '10px', 
+            marginTop: '10px', 
+            borderRadius: '4px', 
+            border: '1px solid #e0e0e0',
+            fontSize: '14px',
+            color: '#666'
+          }}>
+            ※ 送信処理は一時停止中です。キャンセルボタンをクリックすると送信を再開します。
+          </div>
         </div>
         <div className="modal-footer">
           <button 
             className="cancel-btn"
-            onClick={() => setShowCancelConfirmModal(false)}
+            onClick={resumeSending}
           >
             キャンセル
           </button>
@@ -382,19 +448,28 @@ const ConfirmPage = ({
 
   // 送信中プログレスモーダルの表示
   const renderSendingProgressModal = () => {
+    // 送信一時停止中かどうかのステータステキスト
+    const statusText = paused 
+      ? "送信処理を一時停止中..." 
+      : `${processed} / ${selectedRecipients.length} 件完了`;
+
     return (
       <Modal onClose={() => {}}>
         <div className="modal-content sending-progress">
-          <h3>メール送信中...</h3>
+          <h3>メール送信中{paused ? '（一時停止中）' : '...'}</h3>
           <div id="send-progress-bar">
-            <div id="send-progress" style={{ width: `${progress}%` }}></div>
+            <div id="send-progress" style={{ 
+              width: `${progress}%`,
+              background: paused ? '#f39c12' : '#2ecc71'
+            }}></div>
           </div>
-          <div id="send-progress-text">{processed} / {selectedRecipients.length} 件完了</div>
+          <div id="send-progress-text">{statusText}</div>
           <div style={{ marginTop: '20px' }}>
             <button 
               id="cancel-sending-btn" 
               className="action-btn warning"
               onClick={cancelSending}
+              disabled={paused} // 一時停止中は送信中止ボタンを無効化
             >
               送信中止
             </button>
@@ -714,11 +789,11 @@ const ConfirmPage = ({
       {/* 送信確認モーダル */}
       {showSendConfirmModal && renderSendConfirmModal()}
       
-      {/* 送信中止確認モーダル */}
-      {showCancelConfirmModal && renderCancelConfirmModal()}
-      
       {/* 送信プログレスモーダル */}
       {showSendingModal && renderSendingProgressModal()}
+      
+      {/* 送信中止確認モーダル - モーダルの順序を変更 */}
+      {showCancelConfirmModal && renderCancelConfirmModal()}
       
       {/* メールプレビューモーダル */}
       {previewModalOpen && renderPreviewModal()}
