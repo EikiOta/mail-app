@@ -10,6 +10,7 @@ const ConfirmPage = ({
   onSend 
 }) => {
   const [showSendingModal, setShowSendingModal] = useState(false);
+  const [showSendConfirmModal, setShowSendConfirmModal] = useState(false);
   const [progress, setProgress] = useState(0);
   const [processed, setProcessed] = useState(0);
   const [recipientGreetings, setRecipientGreetings] = useState({});
@@ -161,8 +162,14 @@ const ConfirmPage = ({
     }));
   };
 
+  // 送信確認モーダルを表示
+  const openSendConfirmModal = () => {
+    setShowSendConfirmModal(true);
+  };
+
   // 送信実行時の処理
   const executeSend = () => {
+    setShowSendConfirmModal(false);
     setShowSendingModal(true);
     setProgress(0);
     setProcessed(0);
@@ -288,6 +295,52 @@ const ConfirmPage = ({
           <strong>設定:</strong> {compressionSettingText}
         </div>
       </div>
+    );
+  };
+
+  // 送信確認モーダルを表示
+  const renderSendConfirmModal = () => {
+    return (
+      <Modal onClose={() => setShowSendConfirmModal(false)}>
+        <div className="modal-header">
+          <h3 className="modal-title">送信確認</h3>
+        </div>
+        <div className="modal-body">
+          <p>選択した {selectedRecipients.length} 件の宛先にメールを送信します。よろしいですか？</p>
+          <p style={{ color: '#666', fontSize: '14px' }}>※送信したメールは取り消しできません</p>
+          
+          {mailData.attachments && mailData.attachments.length > 0 && (
+            <div style={{ 
+              backgroundColor: '#f9f9f9', 
+              padding: '10px', 
+              marginTop: '10px', 
+              borderRadius: '4px', 
+              border: '1px solid #e0e0e0' 
+            }}>
+              <p style={{ fontWeight: 'bold', margin: '0 0 5px 0' }}>添付ファイル情報:</p>
+              <ul style={{ margin: '0', paddingLeft: '20px' }}>
+                {mailData.attachments.map((attachment, index) => (
+                  <li key={index}>{attachment.name}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+        <div className="modal-footer">
+          <button 
+            className="cancel-btn"
+            onClick={() => setShowSendConfirmModal(false)}
+          >
+            キャンセル
+          </button>
+          <button 
+            className="confirm-btn"
+            onClick={executeSend}
+          >
+            送信する
+          </button>
+        </div>
+      </Modal>
     );
   };
 
@@ -480,10 +533,6 @@ const ConfirmPage = ({
   // パスワード通知メールのサンプル内容
   const passwordEmailSample = getPasswordEmailSample();
 
-  // 送信先一覧をデバッグ
-  console.log("Selected Recipients:", selectedRecipients);
-  console.log("Paginated Recipients:", getPaginatedRecipients());
-
   return (
     <div className="container" id="confirm-page">
       <h1>送信確認</h1>
@@ -619,12 +668,15 @@ const ConfirmPage = ({
         <button className="action-btn" onClick={onBack}>編集に戻る</button>
         <button 
           className="action-btn success" 
-          onClick={executeSend}
+          onClick={openSendConfirmModal}
           disabled={selectedRecipients.length === 0}
         >
           送信実行
         </button>
       </div>
+      
+      {/* 送信確認モーダル */}
+      {showSendConfirmModal && renderSendConfirmModal()}
       
       {/* 送信プログレスモーダル */}
       {showSendingModal && renderSendingProgressModal()}
