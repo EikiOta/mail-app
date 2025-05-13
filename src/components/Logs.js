@@ -12,7 +12,9 @@ const Logs = ({ logs }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [showLogDetailModal, setShowLogDetailModal] = useState(false);
   const [currentLog, setCurrentLog] = useState(null);
+  const [logDetailCurrentPage, setLogDetailCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const logDetailItemsPerPage = 10;
 
   // ログに応じたダミーの送信先データ
   const getDummyRecipientsForLog = (log) => {
@@ -139,6 +141,7 @@ const Logs = ({ logs }) => {
   // ログの詳細表示
   const openLogDetail = (log) => {
     setCurrentLog(log);
+    setLogDetailCurrentPage(1); // ページを初期化
     setShowLogDetailModal(true);
   };
 
@@ -149,6 +152,13 @@ const Logs = ({ logs }) => {
     const endIndex = Math.min(startIndex + itemsPerPage, filteredLogs.length);
     
     return filteredLogs.slice(startIndex, endIndex);
+  };
+
+  // ログ詳細モーダルでのページネーション処理
+  const getPaginatedRecipients = (recipients) => {
+    const startIndex = (logDetailCurrentPage - 1) * logDetailItemsPerPage;
+    const endIndex = Math.min(startIndex + logDetailItemsPerPage, recipients.length);
+    return recipients.slice(startIndex, endIndex);
   };
 
   // 添付ファイル情報を表示
@@ -174,6 +184,7 @@ const Logs = ({ logs }) => {
     
     // 現在のログに対応するダミーの受信者リストを生成
     const dummyRecipients = getDummyRecipientsForLog(currentLog);
+    const paginatedRecipients = getPaginatedRecipients(dummyRecipients);
     
     return (
       <Modal onClose={() => setShowLogDetailModal(false)} fullWidth={true} maxWidth="90%">
@@ -186,7 +197,7 @@ const Logs = ({ logs }) => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
               <h3 style={{ margin: '0', color: '#2c3e50' }}>{currentLog.subject}</h3>
               <span className={`status-badge ${currentLog.status === 'success' ? 'success' : 'error'}`} style={{ fontSize: '14px' }}>
-                {currentLog.status === 'success' ? '成功' : 'エラーあり'}
+                {currentLog.status === 'success' ? '成功' : '失敗あり'}
               </span>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px' }}>
@@ -267,9 +278,9 @@ const Logs = ({ logs }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {dummyRecipients.slice(0, 10).map((recipient, index) => (
+                  {paginatedRecipients.map((recipient, index) => (
                     <tr key={recipient.id}>
-                      <td>{index + 1}</td>
+                      <td>{(logDetailCurrentPage - 1) * logDetailItemsPerPage + index + 1}</td>
                       <td>{recipient.name}</td>
                       <td>{recipient.company}</td>
                       <td>{recipient.department}</td>
@@ -308,6 +319,19 @@ const Logs = ({ logs }) => {
                   ))}
                 </tbody>
               </table>
+              
+              {/* ページネーション追加 */}
+              {dummyRecipients.length > logDetailItemsPerPage && (
+                <div style={{ marginTop: '15px' }}>
+                  <Pagination 
+                    currentPage={logDetailCurrentPage}
+                    totalItems={dummyRecipients.length}
+                    itemsPerPage={logDetailItemsPerPage}
+                    onPageChange={setLogDetailCurrentPage}
+                    noScroll={true}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -337,7 +361,6 @@ const Logs = ({ logs }) => {
               <option value="today">今日</option>
               <option value="week">過去7日</option>
               <option value="month">過去30日</option>
-              <option value="custom">カスタム...</option>
             </select>
           </div>
           
@@ -365,7 +388,7 @@ const Logs = ({ logs }) => {
             >
               <option value="all">すべて</option>
               <option value="success">成功</option>
-              <option value="error">エラーあり</option>
+              <option value="error">失敗あり</option>
             </select>
           </div>
         </div>

@@ -73,6 +73,8 @@ const MailCompose = ({
         if (hasContent) {
           setLeavePage(hash);
           setShowLeaveConfirm(true);
+          // 遷移をキャンセルするためにハッシュを元に戻す
+          window.location.hash = 'mail-compose';
         } else {
           // 内容がなければそのまま遷移
           if (typeof window.navigateToPage === 'function') {
@@ -89,7 +91,7 @@ const MailCompose = ({
     return () => {
       window.removeEventListener('hashchange', handleHashChange);
     };
-  }, [mailData, attachments, selectedRecipients]);
+  }, []); // 依存配列を空にして再登録を防止
 
   // ページ離脱時の警告設定
   useEffect(() => {
@@ -134,12 +136,7 @@ const MailCompose = ({
     
     // App.jsのsetCurrentPageにページ情報を渡す
     if (typeof window.navigateToPage === 'function') {
-      // 直接window.navigateToPageを呼び出すのではなく、
-      // ハッシュを変更してApp.jsのイベントハンドラに検知させる
-      window.location.hash = ''; // 現在のハッシュをクリア
-      setTimeout(() => {
-        window.location.hash = 'direct-' + leavePage; // 特殊なプレフィックスを追加
-      }, 50);
+      window.navigateToPage(leavePage);
     } else {
       // fallback - 直接画面遷移（通常は使用されない）
       window.location.href = '#' + leavePage;

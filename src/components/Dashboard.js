@@ -1,6 +1,7 @@
 // src/components/Dashboard.js
 import React, { useState } from 'react';
 import { Modal } from './common/Modal';
+import Pagination from './common/Pagination';
 
 const Dashboard = ({ logs, onCompose, lastImportDate, onImportSync }) => {
   // 最新の4件のログのみ表示
@@ -10,6 +11,8 @@ const Dashboard = ({ logs, onCompose, lastImportDate, onImportSync }) => {
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncComplete, setSyncComplete] = useState(false);
+  const [logDetailCurrentPage, setLogDetailCurrentPage] = useState(1);
+  const logDetailItemsPerPage = 10;
 
   // ログに応じたダミーの送信先データ
   const getDummyRecipientsForLog = (log) => {
@@ -115,6 +118,7 @@ const Dashboard = ({ logs, onCompose, lastImportDate, onImportSync }) => {
   // ログ詳細を開く
   const openLogDetail = (log) => {
     setCurrentLog(log);
+    setLogDetailCurrentPage(1); // ページを初期化
     setShowLogDetailModal(true);
   };
 
@@ -135,12 +139,20 @@ const Dashboard = ({ logs, onCompose, lastImportDate, onImportSync }) => {
     );
   };
 
+  // ログ詳細モーダルでのページネーション処理
+  const getPaginatedRecipients = (recipients) => {
+    const startIndex = (logDetailCurrentPage - 1) * logDetailItemsPerPage;
+    const endIndex = Math.min(startIndex + logDetailItemsPerPage, recipients.length);
+    return recipients.slice(startIndex, endIndex);
+  };
+
   // ログ詳細モーダルの内容をレンダリング
   const renderLogDetailModal = () => {
     if (!currentLog) return null;
     
     // 現在のログに対応するダミーの受信者リストを生成
     const dummyRecipients = getDummyRecipientsForLog(currentLog);
+    const paginatedRecipients = getPaginatedRecipients(dummyRecipients);
     
     return (
       <Modal onClose={() => setShowLogDetailModal(false)} fullWidth={true} maxWidth="90%">
@@ -153,7 +165,7 @@ const Dashboard = ({ logs, onCompose, lastImportDate, onImportSync }) => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
               <h3 style={{ margin: '0', color: '#2c3e50' }}>{currentLog.subject}</h3>
               <span className={`status-badge ${currentLog.status === 'success' ? 'success' : 'error'}`} style={{ fontSize: '14px' }}>
-                {currentLog.status === 'success' ? '成功' : 'エラーあり'}
+                {currentLog.status === 'success' ? '成功' : '失敗あり'}
               </span>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px' }}>
@@ -234,9 +246,9 @@ const Dashboard = ({ logs, onCompose, lastImportDate, onImportSync }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {dummyRecipients.slice(0, 10).map((recipient, index) => (
+                  {paginatedRecipients.map((recipient, index) => (
                     <tr key={recipient.id}>
-                      <td>{index + 1}</td>
+                      <td>{(logDetailCurrentPage - 1) * logDetailItemsPerPage + index + 1}</td>
                       <td>{recipient.name}</td>
                       <td>{recipient.company}</td>
                       <td>{recipient.department}</td>
@@ -275,6 +287,19 @@ const Dashboard = ({ logs, onCompose, lastImportDate, onImportSync }) => {
                   ))}
                 </tbody>
               </table>
+              
+              {/* ページネーション追加 */}
+              {dummyRecipients.length > logDetailItemsPerPage && (
+                <div style={{ marginTop: '15px' }}>
+                  <Pagination 
+                    currentPage={logDetailCurrentPage}
+                    totalItems={dummyRecipients.length}
+                    itemsPerPage={logDetailItemsPerPage}
+                    onPageChange={setLogDetailCurrentPage}
+                    noScroll={true}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -404,21 +429,6 @@ const Dashboard = ({ logs, onCompose, lastImportDate, onImportSync }) => {
     flex: '1'
   };
 
-  const historyTableStyle = {
-    width: '100%',
-    marginBottom: '0'
-  };
-
-  const historyTableThStyle = {
-    padding: '8px',
-    fontSize: '13px'
-  };
-
-  const historyTableTdStyle = {
-    padding: '6px 8px',
-    fontSize: '13px'
-  };
-
   const actionBtnStyle = {
     marginBottom: '15px'
   };
@@ -468,29 +478,34 @@ const Dashboard = ({ logs, onCompose, lastImportDate, onImportSync }) => {
       
       <div className="recent-history" style={recentHistoryStyle}>
         <h2 style={{ fontSize: '16px', marginBottom: '10px', paddingBottom: '5px', borderBottom: '1px solid #eee' }}>最近の送信履歴</h2>
-        <table className="history-table" style={historyTableStyle}>
+        <table className="log-table" style={{ width: '100%' }}>
           <thead>
             <tr>
-              <th width="20%" style={historyTableThStyle}>日時</th>
-              <th width="35%" style={historyTableThStyle}>件名</th>
-              <th width="15%" style={historyTableThStyle}>送信数</th>
-              <th width="15%" style={historyTableThStyle}>ステータス</th>
-              <th width="15%" style={historyTableThStyle}></th>
+              <th width="5%">No</th>
+              <th width="15%">日時</th>
+              <th width="30%">件名</th>
+              <th width="15%">送信数</th>
+              <th width="10%">成功</th>
+              <th width="10%">失敗</th>
+              <th width="15%"></th>
             </tr>
           </thead>
           <tbody>
-            {recentLogs.map(log => (
+            {recentLogs.map((log, index) => (
               <tr key={log.id}>
-                <td style={historyTableTdStyle}>{log.date}</td>
-                <td style={historyTableTdStyle}>{log.subject}</td>
-                <td style={historyTableTdStyle}>{log.totalCount}件</td>
-                <td style={historyTableTdStyle}>
-                  <span className={`status-badge ${log.status === 'success' ? 'success' : 'error'}`} style={{ fontSize: '11px', padding: '2px 6px' }}>
-                    {log.status === 'success' ? '成功' : 'エラーあり'}
-                  </span>
-                </td>
-                <td style={historyTableTdStyle}>
-                  <button className="log-details-btn" style={{ fontSize: '11px', padding: '2px 6px' }} onClick={() => openLogDetail(log)}>詳細</button>
+                <td>{index + 1}</td>
+                <td>{log.date}</td>
+                <td>{log.subject}</td>
+                <td>{log.totalCount}件</td>
+                <td>{log.successCount}件</td>
+                <td>{log.errorCount}件</td>
+                <td>
+                  <button 
+                    className="log-details-btn" 
+                    onClick={() => openLogDetail(log)}
+                  >
+                    詳細
+                  </button>
                 </td>
               </tr>
             ))}
