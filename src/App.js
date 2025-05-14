@@ -39,37 +39,68 @@ function App() {
   // 顧客管理リスト最終同期日時
   const [lastImportDate, setLastImportDate] = useState('2025/04/10 15:30');
 
-  // グローバルナビゲーション関数の設定
+  // 現在のハッシュを監視する
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.substring(1);
+      
+      // hashがあり、かつ現在のページと異なる場合だけ処理する
+      if (hash && hash !== currentPage && hash !== 'direct-') {
+        // "direct-"プレフィックスがついている場合は特別処理
+        if (hash.startsWith('direct-')) {
+          const targetPage = hash.replace('direct-', '');
+          setCurrentPage(targetPage);
+          window.location.hash = '';
+        }
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, [currentPage]);
+
+  // 初期化
   useEffect(() => {
     // グローバルにページ遷移関数を設定
     window.navigateToPage = (page) => {
-      // 「遷移先ページ」を設定する機能を分離
-      const executePageChange = (targetPage) => {
-        setCurrentPage(targetPage);
+      console.log(`[App] navigateToPage called with page: ${page}, currentPage: ${currentPage}`);
+      
+      const executePageChange = () => {
+        // ナビゲーション実行（直接ページを変更）
+        setCurrentPage(page);
+        // ナビゲーション後にURLのハッシュを更新（オプショナル）
+        window.location.hash = page;
       };
       
+      // メール作成画面からの遷移
       if (currentPage === 'mail-compose') {
-        // メール作成画面からの遷移
-        const canNavigate = mailComposeRef.current && 
-                          typeof mailComposeRef.current.handlePageNavigation === 'function' && 
-                          mailComposeRef.current.handlePageNavigation(page);
-        
-        if (!canNavigate) {
-          // メール作成画面が遷移を拒否（警告表示など）
-          return;
+        // メール作成画面からの遷移を確認
+        if (mailComposeRef.current && typeof mailComposeRef.current.handleNavigationRequest === 'function') {
+          const canNavigate = mailComposeRef.current.handleNavigationRequest(page);
+          if (!canNavigate) {
+            // 遷移拒否（モーダル表示などが行われる）
+            return;
+          }
         }
-      } else if (currentPage === 'confirm') {
-        // 送信確認画面からの遷移
+      } 
+      // 送信確認画面からの遷移
+      else if (currentPage === 'confirm') {
         // 「編集に戻る」または「送信実行」以外の遷移は確認が必要
         if (page !== 'mail-compose' && page !== 'result') {
-          // 遷移先をハッシュで設定し、ConfirmPage側で検知
-          window.location.hash = page;
-          return;
+          if (confirmPageRef.current && typeof confirmPageRef.current.handleNavigationRequest === 'function') {
+            const canNavigate = confirmPageRef.current.handleNavigationRequest(page);
+            if (!canNavigate) {
+              // 遷移拒否（モーダル表示などが行われる）
+              return;
+            }
+          }
         }
       }
       
-      // 通常の遷移
-      executePageChange(page);
+      // 特に条件なく遷移を許可
+      executePageChange();
     };
 
     return () => {
@@ -78,7 +109,7 @@ function App() {
     };
   }, [currentPage]);
 
-  // 初期化
+  // アプリの初期データをロード
   useEffect(() => {
     // 30件のダミーデータを生成
     const contacts = generateDummyContacts(30);
@@ -95,8 +126,8 @@ function App() {
         errorCount: 0,
         status: 'success',
         templateId: 1,
-        passwordEmailSuccess: 25, // パスワード通知メール成功数を追加
-        passwordEmailError: 0     // パスワード通知メールエラー数を追加
+        passwordEmailSuccess: 25,
+        passwordEmailError: 0
       },
       {
         id: 2,
@@ -137,42 +168,20 @@ function App() {
     ]);
   }, []);
 
-  // ハッシュ変更イベントハンドラ（特別なハッシュを検知する）
-  useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.substring(1);
-      
-      // 直接遷移用の特殊ハッシュを検知
-      if (hash.startsWith('direct-')) {
-        const targetPage = hash.replace('direct-', '');
-        setCurrentPage(targetPage);
-        window.location.hash = ''; // ハッシュをクリア
-      }
-    };
-
-    window.addEventListener('hashchange', handleHashChange);
-
-    return () => {
-      window.removeEventListener('hashchange', handleHashChange);
-    };
-  }, []);
-
   // useEffect でページ変更時のスクロール処理を行う
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [currentPage]);
 
-  // ページ遷移時の処理
+  // ページ遷移時の処理（Navigation.jsから呼ばれる）
   const handlePageChange = (page) => {
-    // メール作成画面から他のページへの遷移する場合
-    if (currentPage === 'mail-compose' && page !== 'confirm' && page !== 'result') {
-      // ここでナビゲーションを直接行わず、MailComposeが判断できるようハッシュを変更
-      window.location.hash = page;
-    } else if (currentPage === 'confirm' && page !== 'mail-compose' && page !== 'result') {
-      // 確認画面から他のページへの遷移する場合
-      window.location.hash = page;
+    console.log(`[App] handlePageChange called with page: ${page}, currentPage: ${currentPage}`);
+    
+    if (typeof window.navigateToPage === 'function') {
+      // グローバルのナビゲーション関数を使用
+      window.navigateToPage(page);
     } else {
-      // それ以外のページは通常通り遷移
+      // フォールバック
       setCurrentPage(page);
     }
   };
@@ -212,12 +221,6 @@ function App() {
       setCurrentPage('result');
       return;
     }
-    
-    // 選択された受信者に圧縮設定を適用
-    const recipientsWithSettings = selectedRecipients.map(recipient => ({
-      ...recipient,
-      compressionSettings: mailData.compressionSettings
-    }));
     
     // 送信処理をシミュレート（実際は送信されない）
     // 5%の確率でエラーが発生すると仮定
@@ -304,6 +307,8 @@ function App() {
 
   // ページに応じてコンポーネントを表示
   const renderPage = () => {
+    console.log(`[App] Rendering page: ${currentPage}`);
+    
     switch (currentPage) {
       case 'home':
         return <Dashboard logs={logs} onCompose={() => handlePageChange('mail-compose')} lastImportDate={lastImportDate} onImportSync={handleImportSync} />;

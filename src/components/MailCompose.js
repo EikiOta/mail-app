@@ -1,18 +1,18 @@
 // src/components/MailCompose.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { TEMPLATES } from '../utils/data';
 import { Modal } from './common/Modal';
 import Pagination from './common/Pagination';
 
-const MailCompose = ({ 
+const MailCompose = forwardRef(({ 
   recipients, 
   onConfirm, 
   updateSelection, 
   addCc,
   mailData,
   setMailData
-}) => {
-  // 状態管理の変数宣言部分は省略...
+}, ref) => {
+  // 状態管理の変数宣言部分
   const [showCcModal, setShowCcModal] = useState(false);
   const [showPasswordEmailModal, setShowPasswordEmailModal] = useState(false);
   const [showTemplateChangeConfirm, setShowTemplateChangeConfirm] = useState(false);
@@ -55,6 +55,30 @@ const MailCompose = ({
   // 添付ファイルがあるかどうか
   const hasAttachments = attachments.length > 0;
 
+  // ページ内容が入力されているかチェック - 再利用できるように関数化
+  const hasContent = () => {
+    return mailData.subject || mailData.content || attachments.length > 0 || selectedRecipients.length > 0;
+  };
+
+  // 親コンポーネント（App.js）から参照できるメソッドを公開
+  useImperativeHandle(ref, () => ({
+    // ナビゲーションリクエストを処理するメソッド（App.jsから呼ばれる）
+    handleNavigationRequest: (page) => {
+      console.log(`[MailCompose] handleNavigationRequest called with page: ${page}`);
+      
+      // 内容があるかチェック
+      if (hasContent()) {
+        // 内容がある場合は確認モーダルを表示
+        setLeavePage(page);
+        setShowLeaveConfirm(true);
+        return false; // 遷移を一時停止
+      }
+      
+      // 内容がない場合は直ちに遷移を許可
+      return true;
+    }
+  }));
+
   useEffect(() => {
     // 初期化時にコンポーネント内の圧縮設定をmailDataから設定
     if (mailData.compressionSettings) {
@@ -63,44 +87,11 @@ const MailCompose = ({
     }
   }, []);
 
-  // ハッシュの変更を監視してページ遷移を検知
+  // ページ離脱時の警告設定（ブラウザのリロードや閉じる操作時）
   useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.substring(1);
-      if (hash && hash !== 'mail-compose') {
-        const hasContent = mailData.subject || mailData.content || attachments.length > 0 || selectedRecipients.length > 0;
-        
-        if (hasContent) {
-          setLeavePage(hash);
-          setShowLeaveConfirm(true);
-          // 遷移をキャンセルするためにハッシュを元に戻す
-          window.location.hash = 'mail-compose';
-        } else {
-          // 内容がなければそのまま遷移
-          if (typeof window.navigateToPage === 'function') {
-            window.navigateToPage(hash);
-          } else {
-            window.location.href = '#' + hash;
-          }
-        }
-      }
-    };
-    
-    window.addEventListener('hashchange', handleHashChange);
-    
-    return () => {
-      window.removeEventListener('hashchange', handleHashChange);
-    };
-  }, []); // 依存配列を空にして再登録を防止
-
-  // ページ離脱時の警告設定
-  useEffect(() => {
-    // 入力内容があるかどうかをチェック
-    const hasContent = mailData.subject || mailData.content || attachments.length > 0 || selectedRecipients.length > 0;
-    
     // beforeunload イベントハンドラ
     const handleBeforeUnload = (e) => {
-      if (hasContent) {
+      if (hasContent()) {
         e.preventDefault();
         e.returnValue = '';
         return '';
@@ -116,30 +107,19 @@ const MailCompose = ({
     };
   }, [mailData, attachments, selectedRecipients]);
 
-  // ページ遷移前の確認処理（Navigation.jsから呼ばれる）
-  const handlePageNavigation = (page) => {
-    // 入力内容があるかどうかをチェック
-    const hasContent = mailData.subject || mailData.content || attachments.length > 0 || selectedRecipients.length > 0;
-    
-    if (hasContent) {
-      setLeavePage(page);
-      setShowLeaveConfirm(true);
-      return false; // 遷移を中止
-    }
-    
-    return true; // 通常通り遷移
-  };
-
   // 実際のページ遷移処理
   const executeLeavePage = () => {
+    console.log(`[MailCompose] Executing leave to page: ${leavePage}`);
+    
+    // モーダルを閉じる
     setShowLeaveConfirm(false);
     
-    // App.jsのsetCurrentPageにページ情報を渡す
+    // 直接App.jsのグローバルナビゲーション関数を呼び出す
     if (typeof window.navigateToPage === 'function') {
       window.navigateToPage(leavePage);
     } else {
-      // fallback - 直接画面遷移（通常は使用されない）
-      window.location.href = '#' + leavePage;
+      // フォールバック - 直接ハッシュを変更（通常は使用されない）
+      window.location.hash = leavePage;
     }
   };
 
@@ -1256,13 +1236,6 @@ const MailCompose = ({
       {renderLeaveConfirmModal()}
     </div>
   );
-};
-
-// ページ遷移の確認メソッドをエクスポート
-MailCompose.handlePageNavigation = (page) => {
-  // このメソッドはApp.jsから呼ばれる予定
-  // 実装はここでは行わず、App.jsでインスタンスメソッドとして扱う
-  return true;
-};
+});
 
 export default MailCompose;
