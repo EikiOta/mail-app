@@ -19,7 +19,7 @@ const Settings = ({ recipients = [], lastImportDate, onImportSync }) => {
   const [syncing, setSyncing] = useState(false);
   const [syncComplete, setSyncComplete] = useState(false);
   const [passwordEmailTemplate, setPasswordEmailTemplate] = useState(
-    `<<会社名>> <<宛先名>>様
+    `<<会社名>> <<名前>>様
 
 いつもお世話になっております。xxxのyyyです。
 
@@ -34,7 +34,9 @@ const Settings = ({ recipients = [], lastImportDate, onImportSync }) => {
   const [newTemplateData, setNewTemplateData] = useState({
     name: '',
     subject: '',
-    content: ''
+    content: `<<会社名>> <<名前>>様
+
+`
   });
 
   // 初期化
@@ -101,7 +103,13 @@ const Settings = ({ recipients = [], lastImportDate, onImportSync }) => {
     };
     
     setTemplates([...templates, newTemplate]);
-    setNewTemplateData({ name: '', subject: '', content: '' });
+    setNewTemplateData({ 
+      name: '', 
+      subject: '', 
+      content: `<<会社名>> <<名前>>様
+
+` 
+    });
     setShowAddTemplateModal(false);
   };
 
@@ -155,8 +163,16 @@ const Settings = ({ recipients = [], lastImportDate, onImportSync }) => {
     // プレビュー例での置換
     return passwordEmailTemplate
       .replace('<<会社名>>', '株式会社サンプル')
-      .replace('<<宛先名>>', '山田 太郎')
+      .replace('<<名前>>', '山田 太郎')
       .replace('<<パスワード>>', 'a8Xp2Z');
+  };
+
+  // テンプレートのプレビュー表示
+  const renderTemplatePreview = (content) => {
+    // プレビュー例での置換
+    return content
+      .replace('<<会社名>>', '株式会社サンプル')
+      .replace('<<名前>>', '山田 太郎');
   };
 
   // ページングされたデータを取得
@@ -166,6 +182,32 @@ const Settings = ({ recipients = [], lastImportDate, onImportSync }) => {
     
     return recipientsData.slice(startIndex, endIndex);
   };
+
+  // プレースホルダー説明コンポーネント
+  const PlaceholderInfo = () => (
+    <div style={{ 
+      backgroundColor: '#f2f7fd', 
+      padding: '15px', 
+      borderRadius: '4px', 
+      border: '1px solid #cce5ff', 
+      marginBottom: '20px' 
+    }}>
+      <h4 style={{ color: '#004085', marginTop: '0', marginBottom: '10px' }}>プレースホルダーについて</h4>
+      <p style={{ margin: '0 0 10px 0', color: '#004085' }}>
+        テンプレートでは以下のプレースホルダーが使用できます。送信時に各宛先の情報に自動的に置換されます。
+      </p>
+      <ul style={{ margin: '0', paddingLeft: '20px', color: '#004085' }}>
+        <li><code>{'<<会社名>>'}</code> - 送信先の会社名</li>
+        <li><code>{'<<名前>>'}</code> - 送信先の担当者名</li>
+      </ul>
+      <p style={{ marginTop: '10px', color: '#004085' }}>
+        例：「<code>{'<<会社名>> <<名前>>様'}</code>」→「株式会社サンプル 山田 太郎様」
+      </p>
+      <p style={{ marginTop: '5px', fontSize: '14px', color: '#004085' }}>
+        ※ テンプレート冒頭に宛先の挨拶文（<code>{'<<会社名>> <<名前>>様'}</code>）を入れることをお勧めします。
+      </p>
+    </div>
+  );
 
   return (
     <div className="container" id="settings-page">
@@ -256,6 +298,9 @@ const Settings = ({ recipients = [], lastImportDate, onImportSync }) => {
           
           {/* テンプレート管理タブ */}
           <div className={`tab-pane ${activeTab === 'template-settings' ? 'active' : ''}`} id="template-settings">
+            {/* プレースホルダーに関する説明を追加 */}
+            <PlaceholderInfo />
+            
             <div style={{ marginBottom: '20px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '6px', border: '1px solid #e0e0e0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <button 
                 className="action-btn" 
@@ -336,6 +381,22 @@ const Settings = ({ recipients = [], lastImportDate, onImportSync }) => {
                       {template.content}
                     </div>
                   </div>
+                  
+                  <div className="form-section">
+                    <label style={{ fontWeight: 'bold', fontSize: '14px', marginBottom: '5px', display: 'block' }}>プレビュー例</label>
+                    <div style={{ 
+                      padding: '10px', 
+                      borderRadius: '4px', 
+                      border: '1px solid #e0e0e0',
+                      backgroundColor: '#f5fcf7',
+                      maxHeight: '200px',
+                      overflow: 'auto',
+                      whiteSpace: 'pre-line',
+                      fontSize: '13px'
+                    }}>
+                      {renderTemplatePreview(template.content)}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -369,7 +430,7 @@ const Settings = ({ recipients = [], lastImportDate, onImportSync }) => {
                 <p style={{ color: '#666', fontSize: '14px', marginBottom: '10px' }}>
                   以下のプレースホルダーが使用できます：<br />
                   <code>{'<<会社名>>'}</code> - 送信先の会社名<br />
-                  <code>{'<<宛先名>>'}</code> - 送信先の担当者名<br />
+                  <code>{'<<名前>>'}</code> - 送信先の担当者名<br />
                   <code>{'<<パスワード>>'}</code> - 設定したパスワード
                 </p>
               </div>
@@ -442,6 +503,9 @@ const Settings = ({ recipients = [], lastImportDate, onImportSync }) => {
               
               <div className="form-section">
                 <label htmlFor="template-content">本文</label>
+                <p style={{ color: '#666', fontSize: '14px', marginBottom: '10px' }}>
+                  プレースホルダー: <code>{'<<会社名>>'}</code>, <code>{'<<名前>>'}</code> を利用できます。
+                </p>
                 <textarea 
                   id="template-content"
                   value={currentTemplate.content}
@@ -450,6 +514,19 @@ const Settings = ({ recipients = [], lastImportDate, onImportSync }) => {
                     content: e.target.value
                   })}
                 />
+              </div>
+              
+              <div className="form-section">
+                <label>プレビュー</label>
+                <div style={{ 
+                  whiteSpace: 'pre-line',
+                  backgroundColor: '#f5fcf7',
+                  padding: '15px',
+                  borderRadius: '4px',
+                  border: '1px solid #e0e0e0'
+                }}>
+                  {renderTemplatePreview(currentTemplate.content)}
+                </div>
               </div>
             </div>
           </div>
@@ -510,6 +587,10 @@ const Settings = ({ recipients = [], lastImportDate, onImportSync }) => {
               
               <div className="form-section">
                 <label htmlFor="new-template-content">本文</label>
+                <p style={{ color: '#666', fontSize: '14px', marginBottom: '10px' }}>
+                  プレースホルダー: <code>{'<<会社名>>'}</code>, <code>{'<<名前>>'}</code> を利用できます。<br/>
+                  ※ 冒頭に「<code>{'<<会社名>> <<名前>>様'}</code>」と入れることを推奨します。
+                </p>
                 <textarea 
                   id="new-template-content" 
                   placeholder="テンプレートの本文を入力してください"
@@ -519,6 +600,19 @@ const Settings = ({ recipients = [], lastImportDate, onImportSync }) => {
                     content: e.target.value
                   })}
                 />
+              </div>
+              
+              <div className="form-section">
+                <label>プレビュー</label>
+                <div style={{ 
+                  whiteSpace: 'pre-line',
+                  backgroundColor: '#f5fcf7',
+                  padding: '15px',
+                  borderRadius: '4px',
+                  border: '1px solid #e0e0e0'
+                }}>
+                  {renderTemplatePreview(newTemplateData.content)}
+                </div>
               </div>
             </div>
           </div>

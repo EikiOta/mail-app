@@ -14,7 +14,6 @@ const ConfirmPage = ({
   const [showCancelConfirmModal, setShowCancelConfirmModal] = useState(false); // 送信中止確認モーダル用の状態
   const [progress, setProgress] = useState(0);
   const [processed, setProcessed] = useState(0);
-  const [recipientGreetings, setRecipientGreetings] = useState({});
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [previewRecipient, setPreviewRecipient] = useState(null);
   const [canceled, setCanceled] = useState(false);
@@ -23,9 +22,6 @@ const ConfirmPage = ({
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [leavePage, setLeavePage] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [showEditGreetingModal, setShowEditGreetingModal] = useState(false);
-  const [currentEditingRecipient, setCurrentEditingRecipient] = useState(null);
-  const [editingGreeting, setEditingGreeting] = useState('');
   
   // 送信処理の状態を保持するためのref
   const sendingStateRef = useRef({
@@ -35,24 +31,12 @@ const ConfirmPage = ({
   
   const itemsPerPage = 10;
 
-  // コンポーネントがマウントされた時に、各宛先ごとの挨拶文を初期化
-  useEffect(() => {
-    const greetings = {};
-    
-    selectedRecipients.forEach(recipient => {
-      // 宛先に合わせた挨拶文を自動生成
-      greetings[recipient.id] = `${recipient.company} ${recipient.name}様
-
-`;
-    });
-    
-    setRecipientGreetings(greetings);
-  }, [selectedRecipients]);
-
   // Navigation.jsのonPageChange経由の遷移を検知
   useEffect(() => {
-    // オリジナルのナビゲーション関数を保存
-    const originalNavigateToPage = window.navigateToPage;
+    // 元のナビゲーション関数を保存（存在確認付き）
+    const originalNavigateToPage = typeof window.navigateToPage === 'function' 
+      ? window.navigateToPage 
+      : null;
     
     // ナビゲーション関数をオーバーライド
     window.navigateToPage = (page) => {
@@ -60,16 +44,25 @@ const ConfirmPage = ({
       if (page !== 'mail-compose' && page !== 'result') {
         setLeavePage(page);
         setShowLeaveConfirm(true);
+        return false;
       } else {
         // mail-compose か result への遷移は許可
-        originalNavigateToPage(page);
+        if (originalNavigateToPage) {
+          originalNavigateToPage(page);
+        } else {
+          // 元の関数がない場合はフォールバック処理
+          window.location.hash = page;
+        }
+        return true;
       }
     };
     
     // クリーンアップ関数
     return () => {
-      // ナビゲーション関数を元に戻す
-      window.navigateToPage = originalNavigateToPage;
+      // 元のナビゲーション関数が存在する場合のみ戻す
+      if (originalNavigateToPage) {
+        window.navigateToPage = originalNavigateToPage;
+      }
     };
   }, []);
 
@@ -143,32 +136,6 @@ const ConfirmPage = ({
       // fallback - 直接画面遷移（通常は使用されない）
       window.location.href = '#' + leavePage;
     }
-  };
-
-  // 挨拶文の編集モーダルを開く
-  const openEditGreetingModal = (recipientId) => {
-    const recipient = selectedRecipients.find(r => r.id === recipientId);
-    if (recipient) {
-      setCurrentEditingRecipient(recipient);
-      setEditingGreeting(recipientGreetings[recipientId] || '');
-      setShowEditGreetingModal(true);
-    }
-  };
-
-  // 挨拶文の編集を保存
-  const saveEditedGreeting = () => {
-    if (currentEditingRecipient && editingGreeting !== null) {
-      handleGreetingChange(currentEditingRecipient.id, editingGreeting);
-    }
-    setShowEditGreetingModal(false);
-  };
-
-  // 挨拶文の変更を処理する関数
-  const handleGreetingChange = (recipientId, newGreeting) => {
-    setRecipientGreetings(prev => ({
-      ...prev,
-      [recipientId]: newGreeting
-    }));
   };
 
   // 送信確認モーダルを表示
@@ -310,14 +277,15 @@ const ConfirmPage = ({
     let template = mailData.compressionSettings.passwordEmailTemplate || '';
     return template
       .replace('<<会社名>>', recipient.company)
-      .replace('<<宛先名>>', recipient.name)
+      .replace('<<名前>>', recipient.name)
       .replace('<<パスワード>>', mailData.compressionSettings.password || 'a8Xp2Z');
   };
 
   // サンプル宛先でパスワード通知メールの内容を表示
   const getPasswordEmailSample = () => {
-    const sampleRecipient = selectedRecipients[0] || { company: '株式会社サンプル', name: '山田 太郎' };
-    return getPasswordEmailContent(sampleRecipient);
+    const sampleTemplate = mailData.compressionSettings?.passwordEmailTemplate || '';
+    // プレースホルダーはそのまま表示
+    return sampleTemplate;
   };
 
   // 添付ファイル情報の表示
@@ -483,7 +451,11 @@ const ConfirmPage = ({
   const renderPreviewModal = () => {
     if (!previewRecipient) return null;
     
-    const greeting = recipientGreetings[previewRecipient.id] || '';
+    // プレースホルダーを置換したメール本文
+    const previewContent = mailData.content
+      .replace('<<会社名>>', previewRecipient.company)
+      .replace('<<名前>>', previewRecipient.name);
+    
     const passwordEmailContent = getPasswordEmailContent(previewRecipient);
     
     return (
@@ -514,7 +486,7 @@ const ConfirmPage = ({
               borderRadius: '4px',
               border: '1px solid #e0e0e0' 
             }}>
-              {greeting}{mailData.content}
+              {previewContent}
             </div>
           </div>
           
@@ -546,50 +518,6 @@ const ConfirmPage = ({
         
         <div className="modal-footer">
           <button className="action-btn" onClick={() => setPreviewModalOpen(false)}>閉じる</button>
-        </div>
-      </Modal>
-    );
-  };
-
-  // 挨拶文編集モーダルの表示
-  const renderEditGreetingModal = () => {
-    if (!showEditGreetingModal || !currentEditingRecipient) return null;
-    
-    return (
-      <Modal onClose={() => setShowEditGreetingModal(false)}>
-        <div className="modal-header">
-          <h3 className="modal-title">挨拶文の編集</h3>
-        </div>
-        <div className="modal-body">
-          <p>
-            <strong>{currentEditingRecipient.name}</strong> ({currentEditingRecipient.company})宛の挨拶文を編集します。
-          </p>
-          <textarea
-            style={{ 
-              width: '100%', 
-              minHeight: '150px', 
-              padding: '10px',
-              borderRadius: '4px',
-              border: '1px solid #e0e0e0',
-              marginTop: '10px' 
-            }}
-            value={editingGreeting}
-            onChange={(e) => setEditingGreeting(e.target.value)}
-          />
-        </div>
-        <div className="modal-footer">
-          <button 
-            className="cancel-btn"
-            onClick={() => setShowEditGreetingModal(false)}
-          >
-            キャンセル
-          </button>
-          <button 
-            className="confirm-btn"
-            onClick={saveEditedGreeting}
-          >
-            保存
-          </button>
         </div>
       </Modal>
     );
@@ -659,7 +587,8 @@ const ConfirmPage = ({
           {mailData.content}
         </div>
         <p style={{ color: '#666', fontSize: '14px', marginTop: '10px' }}>
-          ※ 実際に送信されるメールには、各宛先ごとに適切な挨拶文が追加されます。下記の送信先一覧から挨拶文を確認・編集できます。
+          ※ 送信時に「&lt;&lt;会社名&gt;&gt;」「&lt;&lt;名前&gt;&gt;」などのプレースホルダーは宛先ごとに自動的に置換されます。
+          各宛先のプレビューは下記の送信先一覧から確認できます。
         </p>
       </div>
       
@@ -700,11 +629,10 @@ const ConfirmPage = ({
                 <thead>
                   <tr>
                     <th width="5%">No</th>
-                    <th width="15%">宛先(To)</th>
-                    <th width="15%">会社名</th>
-                    <th width="25%">挨拶文</th>
-                    <th width="25%">CC</th>
-                    <th width="15%"></th>
+                    <th width="20%">宛先(To)</th>
+                    <th width="20%">会社名</th>
+                    <th width="30%">CC</th>
+                    <th width="25%"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -713,23 +641,6 @@ const ConfirmPage = ({
                       <td>{(currentPage - 1) * itemsPerPage + index + 1}</td>
                       <td>{recipient.name}</td>
                       <td>{recipient.company}</td>
-                      <td>
-                        <div style={{ 
-                          maxHeight: '60px', 
-                          overflow: 'hidden'
-                        }}>
-                          <div style={{ whiteSpace: 'pre-line' }}>
-                            {recipientGreetings[recipient.id]}
-                          </div>
-                        </div>
-                        <button 
-                          className="log-details-btn" 
-                          style={{ marginTop: '5px' }}
-                          onClick={() => openEditGreetingModal(recipient.id)}
-                        >
-                          編集
-                        </button>
-                      </td>
                       <td>
                         <div className="cc-tags">
                           {recipient.cc && recipient.cc.length > 0 ? (
@@ -797,9 +708,6 @@ const ConfirmPage = ({
       
       {/* メールプレビューモーダル */}
       {previewModalOpen && renderPreviewModal()}
-      
-      {/* 挨拶文編集モーダル */}
-      {renderEditGreetingModal()}
 
       {/* ページ離脱確認モーダル */}
       {showLeaveConfirm && renderLeaveConfirmModal()}

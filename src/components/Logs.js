@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Modal } from './common/Modal';
 import Pagination from './common/Pagination';
+import { LOG_SAMPLE_CONTENT } from '../utils/data';
 
 const Logs = ({ logs }) => {
   const [filters, setFilters] = useState({
@@ -94,8 +95,7 @@ const Logs = ({ logs }) => {
         ] : [],
         status: status,
         passwordStatus: passwordStatus,
-        sentTime: log.date.replace(/(\d+:\d+)$/, (i % 60).toString().padStart(2, '0') + ':' + Math.floor(Math.random() * 60).toString().padStart(2, '0')),
-        greeting: `${personData.company} ${personData.name}様\n\n`
+        sentTime: log.date.replace(/(\d+:\d+)$/, (i % 60).toString().padStart(2, '0') + ':' + Math.floor(Math.random() * 60).toString().padStart(2, '0'))
       });
     }
     
@@ -224,6 +224,9 @@ const Logs = ({ logs }) => {
     const dummyRecipients = getDummyRecipientsForLog(currentLog);
     const paginatedRecipients = getPaginatedRecipients(dummyRecipients);
     
+    // 送信したメール本文
+    const emailContent = LOG_SAMPLE_CONTENT[currentLog.templateId];
+    
     return (
       <Modal onClose={() => setShowLogDetailModal(false)} fullWidth={true} maxWidth="90%">
         <div className="modal-header">
@@ -302,6 +305,28 @@ const Logs = ({ logs }) => {
                 <strong>送信中断:</strong> この送信処理は中断されました。{currentLog.successCount}件が処理され、残りの{currentLog.unprocessedCount}件は未処理です。
               </div>
             )}
+          </div>
+          
+          {/* メール本文表示セクションを追加 */}
+          <div className="log-detail-item" style={{ marginBottom: '15px', border: '1px solid #e0e0e0', borderRadius: '6px', padding: '15px' }}>
+            <div className="log-detail-label" style={{ fontWeight: 'bold', marginBottom: '10px' }}>送信メール内容</div>
+            <div className="log-detail-value">
+              <div style={{ marginBottom: '10px' }}>
+                <strong>件名: </strong>{emailContent ? emailContent.subject : currentLog.subject}
+              </div>
+              <div style={{ 
+                whiteSpace: 'pre-line', 
+                backgroundColor: '#f9f9f9',
+                padding: '15px',
+                borderRadius: '4px',
+                border: '1px solid #e0e0e0' 
+              }}>
+                {emailContent ? emailContent.content : '（内容は利用できません）'}
+              </div>
+              <p style={{ fontSize: '14px', color: '#666', marginTop: '10px', fontStyle: 'italic' }}>
+                ※ 送信時に「&lt;&lt;会社名&gt;&gt;」「&lt;&lt;名前&gt;&gt;」などのプレースホルダーは各宛先の情報に置換されます。
+              </p>
+            </div>
           </div>
             
           <div className="log-detail-item" style={{ marginBottom: '15px', border: '1px solid #e0e0e0', borderRadius: '6px', padding: '15px' }}>

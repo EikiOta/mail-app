@@ -18,6 +18,8 @@ const MailCompose = forwardRef(({
   const [showTemplateChangeConfirm, setShowTemplateChangeConfirm] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [showAttachmentDeleteConfirm, setShowAttachmentDeleteConfirm] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [previewRecipient, setPreviewRecipient] = useState(null);
   const [attachmentToDelete, setAttachmentToDelete] = useState(null);
   const [leavePage, setLeavePage] = useState('');
   const [selectedTemplateId, setSelectedTemplateId] = useState(null);
@@ -32,8 +34,9 @@ const MailCompose = forwardRef(({
   const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'asc' }); // デフォルトは番号順
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [recipientToDelete, setRecipientToDelete] = useState(null);
+  const [showPlaceholderInfo, setShowPlaceholderInfo] = useState(false);
   const [passwordEmail, setPasswordEmail] = useState(
-    `<<会社名>> <<宛先名>>様
+    `<<会社名>> <<名前>>様
 
 いつもお世話になっております。xxxのyyyです。
 
@@ -310,8 +313,24 @@ const MailCompose = forwardRef(({
     // プレビュー例での置換
     return passwordEmail
       .replace('<<会社名>>', '株式会社サンプル')
-      .replace('<<宛先名>>', '山田 太郎')
+      .replace('<<名前>>', '山田 太郎')
       .replace('<<パスワード>>', document.getElementById('attachment-password')?.value || 'a8Xp2Z');
+  };
+
+  // メールプレビューの表示
+  const openPreviewModal = (recipient) => {
+    setPreviewRecipient(recipient);
+    setShowPreviewModal(true);
+  };
+
+  // メールプレビューのレンダリング
+  const renderMessagePreview = (recipient) => {
+    if (!recipient) return mailData.content;
+    
+    // プレースホルダーを置換
+    return mailData.content
+      .replace('<<会社名>>', recipient.company)
+      .replace('<<名前>>', recipient.name);
   };
 
   // 送信確認ボタンクリック時の処理
@@ -538,6 +557,12 @@ const MailCompose = forwardRef(({
                     CCを追加
                   </button>
                   <button 
+                    className="log-details-btn" 
+                    onClick={() => openPreviewModal(recipient)}
+                  >
+                    プレビュー
+                  </button>
+                  <button 
                     className="delete-recipient-btn" 
                     onClick={() => confirmDeleteRecipient(recipient.id)}
                   >
@@ -645,6 +670,54 @@ const MailCompose = forwardRef(({
       </>
     );
   };
+
+  // プレースホルダー説明コンポーネント
+  const PlaceholderInfoButton = () => (
+    <div style={{ 
+      marginBottom: '15px',
+      textAlign: 'right'
+    }}>
+      <button 
+        onClick={() => setShowPlaceholderInfo(!showPlaceholderInfo)}
+        style={{ 
+          backgroundColor: '#f2f7fd', 
+          border: '1px solid #cce5ff',
+          borderRadius: '4px',
+          padding: '5px 10px',
+          fontSize: '13px',
+          color: '#004085',
+          cursor: 'pointer'
+        }}
+      >
+        {showPlaceholderInfo ? 'プレースホルダーの説明を隠す' : 'プレースホルダーの説明を表示'}
+      </button>
+      
+      {showPlaceholderInfo && (
+        <div style={{ 
+          backgroundColor: '#f2f7fd', 
+          padding: '15px', 
+          borderRadius: '4px', 
+          border: '1px solid #cce5ff', 
+          marginTop: '10px',
+          textAlign: 'left'
+        }}>
+          <p style={{ margin: '0 0 10px 0', color: '#004085' }}>
+            以下のプレースホルダーがメール本文内で使用できます。送信時に各宛先の情報に自動的に置換されます。
+          </p>
+          <ul style={{ margin: '0', paddingLeft: '20px', color: '#004085' }}>
+            <li><code>{'<<会社名>>'}</code> - 送信先の会社名</li>
+            <li><code>{'<<名前>>'}</code> - 送信先の担当者名</li>
+          </ul>
+          <p style={{ marginTop: '10px', color: '#004085' }}>
+            例：「<code>{'<<会社名>> <<名前>>様'}</code>」→「株式会社サンプル 山田 太郎様」
+          </p>
+          <p style={{ marginTop: '5px', fontSize: '14px', color: '#004085' }}>
+            ※ 「宛先を選択」セクションから「プレビュー」ボタンをクリックすると、プレースホルダーが置換された状態でプレビューを確認できます。
+          </p>
+        </div>
+      )}
+    </div>
+  );
 
   // CCモーダルのレンダリング
   const renderCcModal = () => {
@@ -866,7 +939,7 @@ const MailCompose = forwardRef(({
             <p style={{ color: '#666', fontSize: '14px', marginBottom: '10px' }}>
               以下のプレースホルダーが使用できます：<br />
               <code>{'<<会社名>>'}</code> - 送信先の会社名<br />
-              <code>{'<<宛先名>>'}</code> - 送信先の担当者名<br />
+              <code>{'<<名前>>'}</code> - 送信先の担当者名<br />
               <code>{'<<パスワード>>'}</code> - 設定したパスワード
             </p>
             
@@ -1015,6 +1088,96 @@ const MailCompose = forwardRef(({
     );
   };
 
+  // メールプレビューモーダルのレンダリング
+  const renderPreviewModal = () => {
+    if (!showPreviewModal || !previewRecipient) return null;
+    
+    // プレースホルダーを置換したメール本文
+    const previewContent = mailData.content
+      .replace('<<会社名>>', previewRecipient.company)
+      .replace('<<名前>>', previewRecipient.name);
+    
+    // パスワード通知メールのプレビュー
+    const passwordEmailContent = mailData.compressionSettings && 
+                              mailData.compressionSettings.type === 'password' && 
+                              mailData.compressionSettings.sendPasswordEmail
+                              ? passwordEmail
+                                  .replace('<<会社名>>', previewRecipient.company)
+                                  .replace('<<名前>>', previewRecipient.name)
+                                  .replace('<<パスワード>>', mailData.compressionSettings.password || 'a8Xp2Z')
+                              : null;
+    
+    return (
+      <Modal onClose={() => setShowPreviewModal(false)}>
+        <div className="modal-header">
+          <h3 className="modal-title">メールプレビュー</h3>
+        </div>
+        
+        <div className="modal-body">
+          <div className="confirmation-section" style={{ border: 'none', padding: '0' }}>
+            <div className="confirmation-label">宛先</div>
+            <div className="confirmation-value">
+              {previewRecipient.name} ({previewRecipient.company})
+            </div>
+          </div>
+          
+          <div className="confirmation-section" style={{ border: 'none', padding: '0' }}>
+            <div className="confirmation-label">件名</div>
+            <div className="confirmation-value">{mailData.subject}</div>
+          </div>
+          
+          <div className="confirmation-section" style={{ border: 'none', padding: '0' }}>
+            <div className="confirmation-label">メール内容</div>
+            <div className="confirmation-value" style={{ 
+              whiteSpace: 'pre-line', 
+              backgroundColor: '#f9f9f9',
+              padding: '15px',
+              borderRadius: '4px',
+              border: '1px solid #e0e0e0' 
+            }}>
+              {previewContent}
+            </div>
+          </div>
+          
+          {attachments.length > 0 && (
+            <div className="confirmation-section" style={{ border: 'none', padding: '0' }}>
+              <div className="confirmation-label">添付ファイル</div>
+              <div className="confirmation-value">
+                {attachments.map((attachment, index) => (
+                  <div key={index} className="attachment-item" style={{ marginBottom: '5px' }}>
+                    <div className="attachment-icon">📄</div>
+                    <div className="attachment-name">{attachment.name}</div>
+                    <div className="attachment-size">{attachment.size}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {passwordEmailContent && (
+            <div className="confirmation-section" style={{ border: 'none', padding: '0' }}>
+              <div className="confirmation-label">パスワード通知メール</div>
+              <div className="confirmation-value" style={{ 
+                whiteSpace: 'pre-line', 
+                backgroundColor: '#f9f9f9',
+                padding: '15px',
+                borderRadius: '4px',
+                border: '1px solid #e0e0e0', 
+                color: '#333'
+              }}>
+                {passwordEmailContent}
+              </div>
+            </div>
+          )}
+        </div>
+        
+        <div className="modal-footer">
+          <button className="action-btn" onClick={() => setShowPreviewModal(false)}>閉じる</button>
+        </div>
+      </Modal>
+    );
+  };
+
   // テンプレート選択のスタイルを調整して二重矢印を解消
   const selectStyle = {
     maxWidth: '300px',
@@ -1028,6 +1191,9 @@ const MailCompose = forwardRef(({
   return (
     <div className="container" id="mail-compose-page">
       <h1>メール作成</h1>
+      
+      {/* プレースホルダー説明ボタン */}
+      <PlaceholderInfoButton />
       
       {/* メール作成フォーム */}
       <div className="form-area" style={{ border: '1px solid #e0e0e0', borderRadius: '6px', padding: '15px', marginBottom: '20px' }}>
@@ -1239,6 +1405,7 @@ const MailCompose = forwardRef(({
       {renderDeleteConfirmModal()}
       {renderAttachmentDeleteConfirmModal()}
       {renderLeaveConfirmModal()}
+      {renderPreviewModal()}
     </div>
   );
 });
