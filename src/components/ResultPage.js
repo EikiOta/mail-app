@@ -2,7 +2,7 @@
 import React from 'react';
 
 const ResultPage = ({ result, recipients, onHome, onNewMail }) => {
-  const { totalCount, successCount, errorCount, canceled, processedCount } = result;
+  const { totalCount, successCount, errorCount, canceled, processedCount, unprocessedCount } = result;
   
   // メールデータから圧縮設定やパスワード設定を取得
   // 最初の受信者から設定情報を取得する
@@ -57,27 +57,45 @@ const ResultPage = ({ result, recipients, onHome, onNewMail }) => {
                 second: '2-digit'
               }).replace(/\//g, '/');
               
-              // 中止時は処理済みの件数までを「成功」とする
-              const isSuccess = canceled ? (index < processedCount) : (index < successCount);
-              // 中止された場合は、処理されていない件数は表示しない
-              if (canceled && index >= processedCount) {
-                return null;
+              // 中止時は処理済みの件数までを「実行済み」とする
+              const isProcessed = canceled ? (index < processedCount) : (index < successCount + errorCount);
+              const hasError = canceled ? false : (index >= successCount && index < successCount + errorCount);
+              
+              // ステータスを決定
+              let status;
+              if (!isProcessed) {
+                status = '未処理';
+              } else if (hasError) {
+                status = '実行失敗';
+              } else {
+                status = '実行済み';
               }
               
+              // 対応するCSSクラス
+              let statusClass;
+              if (!isProcessed) {
+                statusClass = 'unprocessed';
+              } else if (hasError) {
+                statusClass = 'error';
+              } else {
+                statusClass = 'success';
+              }
+              
+              // 中止された場合は、処理されていない件数も表示
               return (
                 <tr key={recipient.id || index}>
                   <td>{index + 1}</td>
                   <td>{recipient.name}</td>
                   <td>{recipient.company}</td>
                   <td>
-                    <span className={`status-badge ${isSuccess ? 'success' : 'error'}`}>
-                      {isSuccess ? '成功' : 'エラー'}
+                    <span className={`status-badge ${statusClass}`}>
+                      {status}
                     </span>
                   </td>
                   <td>
                     {needsPasswordEmails ? (
-                      <span className={`status-badge ${isSuccess ? 'success' : 'error'}`}>
-                        {isSuccess ? '成功' : 'エラー'}
+                      <span className={`status-badge ${statusClass}`}>
+                        {status}
                       </span>
                     ) : (
                       <span className="status-badge" style={{ backgroundColor: '#f8f9fa', color: '#6c757d' }}>
@@ -85,10 +103,10 @@ const ResultPage = ({ result, recipients, onHome, onNewMail }) => {
                       </span>
                     )}
                   </td>
-                  <td>{sendTimeStr}</td>
+                  <td>{isProcessed ? sendTimeStr : '-'}</td>
                 </tr>
               );
-            }).filter(Boolean)}
+            })}
           </tbody>
         </table>
       </div>
@@ -108,8 +126,8 @@ const ResultPage = ({ result, recipients, onHome, onNewMail }) => {
           border: '1px solid #ffeeba',
           color: '#856404'
         }}>
-          <div style={{ fontWeight: 'bold', marginBottom: '5px', fontSize: '16px' }}>送信が中止されました</div>
-          <div>送信処理は途中で中止されました。合計{processedCount}件まで送信されました。残りの{totalCount - processedCount}件は送信されていません。</div>
+          <div style={{ fontWeight: 'bold', marginBottom: '5px', fontSize: '16px' }}>送信が中断されました</div>
+          <div>送信処理は途中で中止されました。合計{processedCount}件まで処理されました。残りの{totalCount - processedCount}件は未処理です。</div>
         </div>
       )}
       
@@ -122,11 +140,16 @@ const ResultPage = ({ result, recipients, onHome, onNewMail }) => {
             </div>
             <div className="result-description" style={{ color: errorCount === 0 ? '#27ae60' : '#e74c3c' }}>
               {canceled 
-                ? `${processedCount}件のメールが送信されました${errorCount > 0 ? `（${errorCount}件はエラー）` : ''}`
+                ? `${processedCount}件のメールが処理されました${errorCount > 0 ? `（${errorCount}件は実行失敗）` : ''}`
                 : (errorCount === 0 
-                  ? 'すべてのメールが正常に送信されました' 
-                  : `${errorCount}件のメールでエラーが発生しました`)}
+                  ? 'すべてのメールが正常に実行されました' 
+                  : `${errorCount}件のメールで実行失敗が発生しました`)}
             </div>
+            {canceled && unprocessedCount > 0 && (
+              <div className="result-unprocessed" style={{ marginTop: '5px', color: '#f39c12' }}>
+                {unprocessedCount}件のメールは未処理です
+              </div>
+            )}
           </div>
           
           {passwordEmailCount > 0 && (
@@ -135,11 +158,16 @@ const ResultPage = ({ result, recipients, onHome, onNewMail }) => {
               <div className="result-count">{passwordEmailSuccessCount} / {passwordEmailCount} 件送信完了</div>
               <div className="result-description" style={{ color: passwordEmailErrorCount === 0 ? '#27ae60' : '#e74c3c' }}>
                 {canceled 
-                  ? `${passwordEmailCount}件のパスワード通知が送信されました${passwordEmailErrorCount > 0 ? `（${passwordEmailErrorCount}件はエラー）` : ''}`
+                  ? `${passwordEmailCount}件のパスワード通知が処理されました${passwordEmailErrorCount > 0 ? `（${passwordEmailErrorCount}件は実行失敗）` : ''}`
                   : (passwordEmailErrorCount === 0 
-                    ? 'すべてのメールが正常に送信されました' 
-                    : `${passwordEmailErrorCount}件のメールでエラーが発生しました`)}
+                    ? 'すべてのメールが正常に実行されました' 
+                    : `${passwordEmailErrorCount}件のメールで実行失敗が発生しました`)}
               </div>
+              {canceled && unprocessedCount > 0 && (
+                <div className="result-unprocessed" style={{ marginTop: '5px', color: '#f39c12' }}>
+                  {unprocessedCount}件のパスワード通知は未処理です
+                </div>
+              )}
             </div>
           )}
           
@@ -148,11 +176,16 @@ const ResultPage = ({ result, recipients, onHome, onNewMail }) => {
             <div className="result-count">{totalSuccessCount} / {totalSendCount} 件</div>
             <div className="result-description" style={{ color: totalErrorCount === 0 ? '#27ae60' : '#e74c3c' }}>
               {canceled 
-                ? `送信中止により、合計${totalSuccessCount}件のメールのみが送信されました${totalErrorCount > 0 ? `（${totalErrorCount}件はエラー）` : ''}`
+                ? `送信中断により、合計${totalSuccessCount}件のメールのみが処理されました${totalErrorCount > 0 ? `（${totalErrorCount}件は実行失敗）` : ''}`
                 : (totalErrorCount === 0 
-                  ? 'すべてのメールが正常に送信されました' 
-                  : `合計${totalErrorCount}件のメールでエラーが発生しました`)}
+                  ? 'すべてのメールが正常に実行されました' 
+                  : `合計${totalErrorCount}件のメールで実行失敗が発生しました`)}
             </div>
+            {canceled && unprocessedCount > 0 && (
+              <div className="result-unprocessed" style={{ marginTop: '5px', color: '#f39c12' }}>
+                {unprocessedCount * (needsPasswordEmails ? 2 : 1)}件の処理は実行されませんでした
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -56,9 +56,28 @@ const Dashboard = ({ logs, onCompose, lastImportDate, onImportSync }) => {
     const recipients = [];
     
     for (let i = 0; i < log.totalCount; i++) {
-      // 成功/エラー状態を決定（logのsuccessCountに基づく）
-      const isSuccess = i < log.successCount;
-      const passwordStatus = i < log.passwordEmailSuccess ? 'success' : 'error';
+      let status = 'unprocessed'; // デフォルトは未処理
+      let passwordStatus = 'unprocessed';
+      
+      // 送信中断の場合
+      if (log.canceled) {
+        // 処理済み件数の場合
+        if (i < log.successCount) {
+          status = 'success';
+          passwordStatus = log.passwordEmailSuccess > 0 ? 'success' : 'none';
+        }
+        // それ以外は未処理
+      } else {
+        // 通常の場合（中断なし）
+        if (i < log.successCount) {
+          status = 'success';
+          passwordStatus = log.passwordEmailSuccess > 0 ? 'success' : 'none';
+        } else if (i < log.successCount + log.errorCount) {
+          status = 'error';
+          passwordStatus = log.passwordEmailError > 0 ? 'error' : 'none';
+        }
+      }
+      
       const personData = shuffledNames[i] || sampleNames[i % sampleNames.length]; // 必要な数に足りない場合は繰り返し使用
       
       recipients.push({
@@ -71,8 +90,8 @@ const Dashboard = ({ logs, onCompose, lastImportDate, onImportSync }) => {
         cc: i % 3 === 0 ? [
           { id: 1001 + i, name: sampleNames[(i + 10) % sampleNames.length].name, email: sampleNames[(i + 10) % sampleNames.length].email }
         ] : [],
-        status: isSuccess ? 'success' : 'error',
-        passwordStatus: log.passwordEmailSuccess > 0 ? passwordStatus : 'none',
+        status: status,
+        passwordStatus: passwordStatus,
         sentTime: log.date.replace(/(\d+:\d+)$/, (i % 60).toString().padStart(2, '0') + ':' + Math.floor(Math.random() * 60).toString().padStart(2, '0')),
         greeting: `${personData.company} ${personData.name}様\n\n`
       });
@@ -154,6 +173,21 @@ const Dashboard = ({ logs, onCompose, lastImportDate, onImportSync }) => {
     const dummyRecipients = getDummyRecipientsForLog(currentLog);
     const paginatedRecipients = getPaginatedRecipients(dummyRecipients);
     
+    const getStatusText = (status) => {
+      switch(status) {
+        case 'success': return '実行済み';
+        case 'error': return '実行失敗';
+        case 'unprocessed': return '未処理';
+        default: return 'なし';
+      }
+    };
+
+    // ステータスの表示名を取得
+    const getLogStatusText = (log) => {
+      if (log.canceled) return '送信中断';
+      return log.status === 'success' ? '完了' : '失敗あり';
+    };
+    
     return (
       <Modal onClose={() => setShowLogDetailModal(false)} fullWidth={true} maxWidth="90%">
         <div className="modal-header">
@@ -164,8 +198,8 @@ const Dashboard = ({ logs, onCompose, lastImportDate, onImportSync }) => {
           <div className="log-summary-card" style={{ backgroundColor: '#f8f9fa', padding: '20px', borderRadius: '6px', marginBottom: '20px', border: '1px solid #e0e0e0' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
               <h3 style={{ margin: '0', color: '#2c3e50' }}>{currentLog.subject}</h3>
-              <span className={`status-badge ${currentLog.status === 'success' ? 'success' : 'error'}`} style={{ fontSize: '14px' }}>
-                {currentLog.status === 'success' ? '成功' : '失敗あり'}
+              <span className={`status-badge ${currentLog.status}`} style={{ fontSize: '14px' }}>
+                {getLogStatusText(currentLog)}
               </span>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px' }}>
@@ -189,12 +223,18 @@ const Dashboard = ({ logs, onCompose, lastImportDate, onImportSync }) => {
                     </div>
                     <div>
                       <span style={{ fontWeight: 'bold', fontSize: '18px', color: '#27ae60' }}>{currentLog.successCount}</span>
-                      <span style={{ fontSize: '14px', color: '#6c757d', marginLeft: '5px' }}>成功</span>
+                      <span style={{ fontSize: '14px', color: '#6c757d', marginLeft: '5px' }}>実行済み</span>
                     </div>
                     <div>
                       <span style={{ fontWeight: 'bold', fontSize: '18px', color: '#e74c3c' }}>{currentLog.errorCount}</span>
-                      <span style={{ fontSize: '14px', color: '#6c757d', marginLeft: '5px' }}>失敗</span>
+                      <span style={{ fontSize: '14px', color: '#6c757d', marginLeft: '5px' }}>実行失敗</span>
                     </div>
+                    {currentLog.canceled && (
+                      <div>
+                        <span style={{ fontWeight: 'bold', fontSize: '18px', color: '#f39c12' }}>{currentLog.unprocessedCount}</span>
+                        <span style={{ fontSize: '14px', color: '#6c757d', marginLeft: '5px' }}>未処理</span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 
@@ -203,16 +243,29 @@ const Dashboard = ({ logs, onCompose, lastImportDate, onImportSync }) => {
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <div>
                       <span style={{ fontWeight: 'bold', fontSize: '18px', color: '#27ae60' }}>{currentLog.passwordEmailSuccess}</span>
-                      <span style={{ fontSize: '14px', color: '#6c757d', marginLeft: '5px' }}>成功</span>
+                      <span style={{ fontSize: '14px', color: '#6c757d', marginLeft: '5px' }}>実行済み</span>
                     </div>
                     <div>
                       <span style={{ fontWeight: 'bold', fontSize: '18px', color: '#e74c3c' }}>{currentLog.passwordEmailError}</span>
-                      <span style={{ fontSize: '14px', color: '#6c757d', marginLeft: '5px' }}>失敗</span>
+                      <span style={{ fontSize: '14px', color: '#6c757d', marginLeft: '5px' }}>実行失敗</span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
+            
+            {currentLog.canceled && (
+              <div style={{ 
+                marginTop: '15px', 
+                padding: '10px', 
+                backgroundColor: '#fff3cd', 
+                borderRadius: '4px', 
+                border: '1px solid #ffeeba',
+                color: '#856404' 
+              }}>
+                <strong>送信中断:</strong> この送信処理は中断されました。{currentLog.successCount}件が処理され、残りの{currentLog.unprocessedCount}件は未処理です。
+              </div>
+            )}
           </div>
             
           <div className="log-detail-item" style={{ marginBottom: '15px', border: '1px solid #e0e0e0', borderRadius: '6px', padding: '15px' }}>
@@ -268,13 +321,13 @@ const Dashboard = ({ logs, onCompose, lastImportDate, onImportSync }) => {
                       </td>
                       <td>
                         <span className={`status-badge ${recipient.status}`}>
-                          {recipient.status === 'success' ? '成功' : 'エラー'}
+                          {getStatusText(recipient.status)}
                         </span>
                       </td>
                       <td>
                         {recipient.passwordStatus !== 'none' ? (
                           <span className={`status-badge ${recipient.passwordStatus}`}>
-                            {recipient.passwordStatus === 'success' ? '成功' : 'エラー'}
+                            {getStatusText(recipient.passwordStatus)}
                           </span>
                         ) : (
                           <span className="status-badge" style={{ backgroundColor: '#f8f9fa', color: '#6c757d' }}>
@@ -282,7 +335,7 @@ const Dashboard = ({ logs, onCompose, lastImportDate, onImportSync }) => {
                           </span>
                         )}
                       </td>
-                      <td>{recipient.sentTime}</td>
+                      <td>{recipient.status === 'unprocessed' ? '-' : recipient.sentTime}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -433,6 +486,12 @@ const Dashboard = ({ logs, onCompose, lastImportDate, onImportSync }) => {
     marginBottom: '15px'
   };
 
+  // ステータスの表示名を取得
+  const getStatusText = (log) => {
+    if (log.canceled) return '送信中断';
+    return log.status === 'success' ? '完了' : '失敗あり';
+  };
+
   return (
     <div className="container" id="home-page" style={containerStyle}>
       <h1 style={{ marginBottom: '15px', paddingBottom: '8px', fontSize: '22px' }}>ダッシュボード</h1>
@@ -485,8 +544,8 @@ const Dashboard = ({ logs, onCompose, lastImportDate, onImportSync }) => {
               <th width="15%">日時</th>
               <th width="30%">件名</th>
               <th width="15%">送信数</th>
-              <th width="10%">成功</th>
-              <th width="10%">失敗</th>
+              <th width="10%">実行済み</th>
+              <th width="10%">実行失敗</th>
               <th width="15%"></th>
             </tr>
           </thead>
@@ -506,6 +565,11 @@ const Dashboard = ({ logs, onCompose, lastImportDate, onImportSync }) => {
                   >
                     詳細
                   </button>
+                  {log.canceled && (
+                    <span className="status-badge" style={{ marginLeft: '5px', backgroundColor: '#fff3cd', color: '#856404' }}>
+                      中断
+                    </span>
+                  )}
                 </td>
               </tr>
             ))}

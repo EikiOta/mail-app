@@ -164,6 +164,20 @@ function App() {
         templateId: 2,
         passwordEmailSuccess: 10,
         passwordEmailError: 5
+      },
+      {
+        id: 5,
+        date: '2025/04/03 15:45',
+        subject: '新規案件のご案内',
+        totalCount: 30,
+        successCount: 10,
+        errorCount: 2,
+        unprocessedCount: 18,
+        status: 'canceled',
+        templateId: 2,
+        passwordEmailSuccess: 10,
+        passwordEmailError: 0,
+        canceled: true
       }
     ]);
   }, []);
@@ -193,10 +207,23 @@ function App() {
     setCurrentPage('confirm');
   };
 
+  // テンプレートIDを取得（デフォルトは1または件名から推測）
+  const getTemplateId = () => {
+    // mailDataからテンプレートIDを取得
+    // 件名から推測（簡易的な実装）
+    if (mailData.subject.includes('技術者') || mailData.subject.includes('紹介')) {
+      return 1; // 人材紹介メール
+    } else if (mailData.subject.includes('案件')) {
+      return 2; // 案件紹介メール
+    }
+    return 1; // デフォルト値
+  };
+
   // 送信実行
   const executeSend = (processedCount = null) => {
     const selectedRecipients = recipientsMaster.filter(r => r.selected);
     const totalCount = selectedRecipients.length;
+    const templateId = getTemplateId(); // テンプレートIDを取得
     
     // 送信中止された場合
     if (processedCount !== null) {
@@ -204,6 +231,7 @@ function App() {
         totalCount: totalCount,
         successCount: processedCount,
         errorCount: 0,
+        unprocessedCount: totalCount - processedCount,
         canceled: true,
         processedCount: processedCount
       });
@@ -216,6 +244,28 @@ function App() {
             : recipient
         )
       );
+      
+      // 新しいログエントリを追加
+      const now = new Date();
+      const logDate = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      
+      // 新しいログを作成
+      const newLog = {
+        id: logs.length > 0 ? Math.max(...logs.map(log => log.id)) + 1 : 1,
+        date: logDate,
+        subject: mailData.subject,
+        totalCount: totalCount,
+        successCount: processedCount,
+        errorCount: 0,
+        unprocessedCount: totalCount - processedCount,
+        status: 'canceled',
+        templateId: templateId,
+        passwordEmailSuccess: processedCount,
+        passwordEmailError: 0,
+        canceled: true
+      };
+      
+      setLogs([newLog, ...logs]);
       
       // 結果ページに遷移
       setCurrentPage('result');
@@ -239,6 +289,7 @@ function App() {
       totalCount: totalCount,
       successCount,
       errorCount,
+      unprocessedCount: 0,
       canceled: false,
       processedCount: totalCount
     });
@@ -251,6 +302,26 @@ function App() {
           : recipient
       )
     );
+    
+    // 新しいログエントリを追加
+    const now = new Date();
+    const logDate = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    
+    // 新しいログを作成
+    const newLog = {
+      id: logs.length > 0 ? Math.max(...logs.map(log => log.id)) + 1 : 1,
+      date: logDate,
+      subject: mailData.subject,
+      totalCount: totalCount,
+      successCount,
+      errorCount,
+      status: errorCount > 0 ? 'error' : 'success',
+      templateId: templateId,
+      passwordEmailSuccess: successCount,
+      passwordEmailError: errorCount
+    };
+    
+    setLogs([newLog, ...logs]);
     
     // 結果ページに遷移
     setCurrentPage('result');
