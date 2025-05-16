@@ -288,6 +288,22 @@ const ConfirmPage = ({
     return sampleTemplate;
   };
 
+  // 拡張子を除去した名前を取得する関数
+  const getFilenameWithoutExtension = (filename) => {
+    return filename.replace(/\.[^/.]+$/, "");
+  };
+
+  // ファイル名を圧縮設定に応じて表示
+  const getDisplayFileName = (attachment) => {
+    if (mailData.compressionSettings && 
+        mailData.compressionSettings.type === 'password' && 
+        attachment) {
+      const nameWithoutExt = getFilenameWithoutExtension(attachment.name);
+      return `${nameWithoutExt}.zip`;
+    }
+    return attachment ? attachment.name : '';
+  };
+
   // 添付ファイル情報の表示
   const renderAttachmentInfo = () => {
     if (!mailData.attachments || mailData.attachments.length === 0) {
@@ -314,7 +330,7 @@ const ConfirmPage = ({
         {mailData.attachments.map((attachment, index) => (
           <div key={index} className="attachment-item">
             <div className="attachment-icon">📄</div>
-            <div className="attachment-name">{attachment.name}</div>
+            <div className="attachment-name">{getDisplayFileName(attachment)}</div>
             <div className="attachment-size">{attachment.size}</div>
           </div>
         ))}
@@ -348,7 +364,7 @@ const ConfirmPage = ({
               <p style={{ fontWeight: 'bold', margin: '0 0 5px 0' }}>添付ファイル情報:</p>
               <ul style={{ margin: '0', paddingLeft: '20px' }}>
                 {mailData.attachments.map((attachment, index) => (
-                  <li key={index}>{attachment.name}</li>
+                  <li key={index}>{getDisplayFileName(attachment)}</li>
                 ))}
               </ul>
             </div>
@@ -494,7 +510,13 @@ const ConfirmPage = ({
             <div className="confirmation-section" style={{ border: 'none', padding: '0' }}>
               <div className="confirmation-label">添付ファイル</div>
               <div className="confirmation-value">
-                {renderAttachmentInfo()}
+                {mailData.attachments.map((attachment, index) => (
+                  <div key={index} className="attachment-item" style={{ marginBottom: '5px' }}>
+                    <div className="attachment-icon">📄</div>
+                    <div className="attachment-name">{getDisplayFileName(attachment)}</div>
+                    <div className="attachment-size">{attachment.size}</div>
+                  </div>
+                ))}
               </div>
             </div>
           )}

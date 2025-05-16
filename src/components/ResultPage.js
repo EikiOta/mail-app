@@ -29,6 +29,37 @@ const ResultPage = ({ result, recipients, onHome, onNewMail }) => {
   // 現在の日時を取得
   const now = new Date();
   
+  // 拡張子を除去した名前を取得する関数
+  const getFilenameWithoutExtension = (filename) => {
+    return filename.replace(/\.[^/.]+$/, "");
+  };
+  
+  // ファイル名を圧縮設定に応じて表示
+  const getDisplayFileName = (attachment) => {
+    if (compressionSettings && 
+        compressionSettings.type === 'password' && 
+        recipients[0] && 
+        recipients[0].attachmentName) {
+      // 添付ファイル名が含まれている場合
+      const originalName = recipients[0].attachmentName;
+      return originalName;
+    } else if (recipients[0] && recipients[0].attachmentName) {
+      // 添付ファイル情報が含まれている場合は、その名前を使用
+      return recipients[0].attachmentName;
+    } else if (recipients[0] && recipients[0].attachments && recipients[0].attachments.length > 0) {
+      // 受信者に添付ファイル情報が含まれている場合
+      const attachment = recipients[0].attachments[0];
+      if (compressionSettings.type === 'password') {
+        const nameWithoutExt = getFilenameWithoutExtension(attachment.name);
+        return `${nameWithoutExt}.zip`;
+      }
+      return attachment.name;
+    }
+    
+    // 上記以外の場合はデフォルトの名前を表示
+    return 'スキルシート_IK_20250415' + (compressionSettings.type === 'password' ? '.zip' : '');
+  };
+  
   // 送信結果の詳細テーブルを描画
   const renderResultDetails = () => {
     return (

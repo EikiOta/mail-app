@@ -18,6 +18,7 @@ const Settings = ({ recipients = [], lastImportDate, onImportSync }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [syncing, setSyncing] = useState(false);
   const [syncComplete, setSyncComplete] = useState(false);
+  const [showPlaceholderInfo, setShowPlaceholderInfo] = useState(false);
   const [passwordEmailTemplate, setPasswordEmailTemplate] = useState(
     `<<会社名>> <<名前>>様
 
@@ -183,29 +184,52 @@ const Settings = ({ recipients = [], lastImportDate, onImportSync }) => {
     return recipientsData.slice(startIndex, endIndex);
   };
 
-  // プレースホルダー説明コンポーネント
-  const PlaceholderInfo = () => (
+  // プレースホルダー説明ボタンコンポーネント
+  const PlaceholderInfoButton = () => (
     <div style={{ 
-      backgroundColor: '#f2f7fd', 
-      padding: '15px', 
-      borderRadius: '4px', 
-      border: '1px solid #cce5ff', 
-      marginBottom: '20px' 
+      marginBottom: '20px',
+      textAlign: 'right'
     }}>
-      <h4 style={{ color: '#004085', marginTop: '0', marginBottom: '10px' }}>プレースホルダーについて</h4>
-      <p style={{ margin: '0 0 10px 0', color: '#004085' }}>
-        テンプレートでは以下のプレースホルダーが使用できます。送信時に各宛先の情報に自動的に置換されます。
-      </p>
-      <ul style={{ margin: '0', paddingLeft: '20px', color: '#004085' }}>
-        <li><code>{'<<会社名>>'}</code> - 送信先の会社名</li>
-        <li><code>{'<<名前>>'}</code> - 送信先の担当者名</li>
-      </ul>
-      <p style={{ marginTop: '10px', color: '#004085' }}>
-        例：「<code>{'<<会社名>> <<名前>>様'}</code>」→「株式会社サンプル 山田 太郎様」
-      </p>
-      <p style={{ marginTop: '5px', fontSize: '14px', color: '#004085' }}>
-        ※ テンプレート冒頭に宛先の挨拶文（<code>{'<<会社名>> <<名前>>様'}</code>）を入れることをお勧めします。
-      </p>
+      <button 
+        onClick={() => setShowPlaceholderInfo(!showPlaceholderInfo)}
+        style={{ 
+          backgroundColor: '#f2f7fd', 
+          border: '1px solid #cce5ff',
+          borderRadius: '4px',
+          padding: '5px 10px',
+          fontSize: '13px',
+          color: '#004085',
+          cursor: 'pointer'
+        }}
+      >
+        {showPlaceholderInfo ? 'プレースホルダーの説明を隠す' : 'プレースホルダーの説明を表示'}
+      </button>
+      
+      {showPlaceholderInfo && (
+        <div style={{ 
+          backgroundColor: '#f2f7fd', 
+          padding: '15px', 
+          borderRadius: '4px', 
+          border: '1px solid #cce5ff', 
+          marginTop: '10px',
+          textAlign: 'left'
+        }}>
+          <h4 style={{ color: '#004085', marginTop: '0', marginBottom: '10px' }}>プレースホルダーについて</h4>
+          <p style={{ margin: '0 0 10px 0', color: '#004085' }}>
+            テンプレートでは以下のプレースホルダーが使用できます。送信時に各宛先の情報に自動的に置換されます。
+          </p>
+          <ul style={{ margin: '0', paddingLeft: '20px', color: '#004085' }}>
+            <li><code>{'<<会社名>>'}</code> - 送信先の会社名</li>
+            <li><code>{'<<名前>>'}</code> - 送信先の担当者名</li>
+          </ul>
+          <p style={{ marginTop: '10px', color: '#004085' }}>
+            例：「<code>{'<<会社名>> <<名前>>様'}</code>」→「株式会社サンプル 山田 太郎様」
+          </p>
+          <p style={{ marginTop: '5px', fontSize: '14px', color: '#004085' }}>
+            ※ テンプレート冒頭に宛先の挨拶文（<code>{'<<会社名>> <<名前>>様'}</code>）を入れることをお勧めします。
+          </p>
+        </div>
+      )}
     </div>
   );
 
@@ -298,8 +322,8 @@ const Settings = ({ recipients = [], lastImportDate, onImportSync }) => {
           
           {/* テンプレート管理タブ */}
           <div className={`tab-pane ${activeTab === 'template-settings' ? 'active' : ''}`} id="template-settings">
-            {/* プレースホルダーに関する説明を追加 */}
-            <PlaceholderInfo />
+            {/* プレースホルダーの説明を折りたたみ式に変更 */}
+            <PlaceholderInfoButton />
             
             <div style={{ marginBottom: '20px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '6px', border: '1px solid #e0e0e0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <button 

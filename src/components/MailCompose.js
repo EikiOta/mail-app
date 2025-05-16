@@ -48,6 +48,7 @@ const MailCompose = forwardRef(({
   );
   const itemsPerPage = 10;
   const ccItemsPerPage = 5; // CC候補は1ページ5人に設定
+  const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8MB
 
   // App.jsから渡されたmailData.attachmentsを直接使用
   const attachments = mailData.attachments || [];
@@ -186,10 +187,28 @@ const MailCompose = forwardRef(({
     setCompressionType(e.target.value);
   };
 
+  // 拡張子を除去した名前を取得する関数
+  const getFilenameWithoutExtension = (filename) => {
+    return filename.replace(/\.[^/.]+$/, "");
+  };
+
   // ファイル添付時の処理
   const handleFileAttach = (e) => {
     if (e.target.files && e.target.files.length > 0) {
+      // 既に添付ファイルがある場合は追加しない
+      if (attachments.length >= 1) {
+        alert('添付ファイルは最大1件までです。既存のファイルを削除してから添付してください。');
+        return;
+      }
+      
       const file = e.target.files[0];
+      
+      // ファイルサイズチェック（8MB制限）
+      if (file.size > MAX_FILE_SIZE) {
+        alert('添付ファイルは最大8MBまでです。より小さいファイルを選択してください。');
+        return;
+      }
+      
       const fileSize = file.size;
       let sizeStr;
       
@@ -507,7 +526,7 @@ const MailCompose = forwardRef(({
             <th width="10%">部署</th>
             <th width="10%">役職</th>
             <th width="25%">CC</th>
-            <th width="20%"></th>
+            <th width="20%">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -549,21 +568,24 @@ const MailCompose = forwardRef(({
                 </div>
               </td>
               <td>
-                <div className="action-buttons" style={{ display: 'flex', gap: '15px' }}>
+                <div className="button-container" style={{ display: 'flex', gap: '5px', flexWrap: 'nowrap' }}>
                   <button 
-                    className="add-cc-btn" 
+                    className="add-cc-btn"
+                    style={{ whiteSpace: 'nowrap', padding: '3px 5px', fontSize: '12px' }}
                     onClick={() => openCcModal(recipient.id)}
                   >
                     CCを追加
                   </button>
                   <button 
-                    className="log-details-btn" 
+                    className="log-details-btn"
+                    style={{ whiteSpace: 'nowrap', padding: '3px 5px', fontSize: '12px' }}
                     onClick={() => openPreviewModal(recipient)}
                   >
                     プレビュー
                   </button>
                   <button 
-                    className="delete-recipient-btn" 
+                    className="delete-recipient-btn"
+                    style={{ whiteSpace: 'nowrap', padding: '3px 5px', fontSize: '12px' }}
                     onClick={() => confirmDeleteRecipient(recipient.id)}
                   >
                     削除
@@ -1088,6 +1110,15 @@ const MailCompose = forwardRef(({
     );
   };
 
+  // ファイル名を圧縮設定に応じて表示（拡張子なしのファイル名.zipに変更）
+  const getDisplayFileName = (attachment) => {
+    if (compressionType === 'password' && attachment) {
+      const nameWithoutExt = getFilenameWithoutExtension(attachment.name);
+      return `${nameWithoutExt}.zip`;
+    }
+    return attachment ? attachment.name : '';
+  };
+
   // メールプレビューモーダルのレンダリング
   const renderPreviewModal = () => {
     if (!showPreviewModal || !previewRecipient) return null;
@@ -1146,7 +1177,7 @@ const MailCompose = forwardRef(({
                 {attachments.map((attachment, index) => (
                   <div key={index} className="attachment-item" style={{ marginBottom: '5px' }}>
                     <div className="attachment-icon">📄</div>
-                    <div className="attachment-name">{attachment.name}</div>
+                    <div className="attachment-name">{getDisplayFileName(attachment)}</div>
                     <div className="attachment-size">{attachment.size}</div>
                   </div>
                 ))}
@@ -1234,7 +1265,7 @@ const MailCompose = forwardRef(({
         </div>
         
         <div className="form-section">
-          <label>添付ファイル</label>
+          <label>添付ファイル（最大1件、8MBまで）</label>
           <div className="attachment-settings">
             <input 
               type="file" 
@@ -1245,9 +1276,17 @@ const MailCompose = forwardRef(({
             <button 
               className="action-btn" 
               onClick={() => document.getElementById('attachment-file').click()}
+              disabled={attachments.length >= 1}
+              style={{ opacity: attachments.length >= 1 ? 0.5 : 1 }}
             >
               ファイルを添付
             </button>
+            
+            {attachments.length >= 1 && (
+              <p style={{ color: '#666', fontSize: '14px', marginTop: '10px', fontStyle: 'italic' }}>
+                ※ 添付ファイルは最大1件までです。新しいファイルを添付するには、既存のファイルを削除してください。
+              </p>
+            )}
             
             <div className="attachment-list">
               {attachments.map((attachment, index) => (
