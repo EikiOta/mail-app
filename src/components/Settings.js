@@ -19,6 +19,7 @@ const Settings = ({ recipients = [], lastImportDate, onImportSync }) => {
   const [syncing, setSyncing] = useState(false);
   const [syncComplete, setSyncComplete] = useState(false);
   const [showPlaceholderInfo, setShowPlaceholderInfo] = useState(false);
+  const [notification, setNotification] = useState({ show: false, message: '' }); // 通知用の状態を追加
   const [passwordEmailTemplate, setPasswordEmailTemplate] = useState(
     `<<会社名>> <<名前>>様
 
@@ -47,6 +48,38 @@ const Settings = ({ recipients = [], lastImportDate, onImportSync }) => {
       setRecipientsData(recipients);
     }
   }, [recipients]);
+
+  // 通知を表示する関数
+  const showNotification = (message) => {
+    setNotification({ show: true, message });
+    // 3秒後に通知を非表示にする
+    setTimeout(() => {
+      setNotification({ show: false, message: '' });
+    }, 3000);
+  };
+
+  // 通知コンポーネント
+  const Notification = ({ show, message }) => {
+    if (!show) return null;
+    
+    return (
+      <div style={{
+        position: 'fixed',
+        top: '20px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        backgroundColor: '#2ecc71',
+        color: 'white',
+        padding: '10px 20px',
+        borderRadius: '4px',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+        zIndex: 2000,
+        fontWeight: 'bold'
+      }}>
+        {message}
+      </div>
+    );
+  };
 
   // タブ切り替え時に画面上部にスクロール
   const handleTabChange = (tab) => {
@@ -112,6 +145,9 @@ const Settings = ({ recipients = [], lastImportDate, onImportSync }) => {
 ` 
     });
     setShowAddTemplateModal(false);
+    
+    // 保存完了通知を表示
+    showNotification('保存しました');
   };
 
   // 既存テンプレート更新
@@ -123,6 +159,9 @@ const Settings = ({ recipients = [], lastImportDate, onImportSync }) => {
     ));
     
     setShowEditTemplateModal(false);
+    
+    // 保存完了通知を表示
+    showNotification('保存しました');
   };
 
   // 顧客管理リストとの同期ダイアログを開く
@@ -235,6 +274,9 @@ const Settings = ({ recipients = [], lastImportDate, onImportSync }) => {
 
   return (
     <div className="container" id="settings-page">
+      {/* 通知ポップアップ */}
+      <Notification show={notification.show} message={notification.message} />
+      
       <h1>設定</h1>
       
       <div className="app-tabs">
@@ -483,7 +525,12 @@ const Settings = ({ recipients = [], lastImportDate, onImportSync }) => {
               </div>
 
               <div style={{ textAlign: 'right', marginTop: '20px', borderTop: '1px solid #f0f0f0', paddingTop: '15px' }}>
-                <button className="action-btn">保存</button>
+                <button 
+                  className="action-btn"
+                  onClick={() => showNotification('保存しました')}
+                >
+                  保存
+                </button>
               </div>
             </div>
           </div>
