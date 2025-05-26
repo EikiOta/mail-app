@@ -28,7 +28,7 @@ const MailCompose = forwardRef(({
   const [masterCurrentPage, setMasterCurrentPage] = useState(1);
   const [ccCurrentPage, setCcCurrentPage] = useState(1);
   const [selectedCc, setSelectedCc] = useState([]); // CC選択状態をトップレベルで管理
-  const [compressionType, setCompressionType] = useState('password'); // 圧縮方法: 'password', 'none'
+  const [compressionType, setCompressionType] = useState('none'); // デフォルトを'none'に変更
   const [searchQuery, setSearchQuery] = useState({ name: '', company: '' });
   const [ccDepartmentFilter, setCcDepartmentFilter] = useState('all'); // 部署フィルター追加
   const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'asc' }); // デフォルトは番号順
@@ -86,7 +86,7 @@ const MailCompose = forwardRef(({
   useEffect(() => {
     // 初期化時にコンポーネント内の圧縮設定をmailDataから設定
     if (mailData.compressionSettings) {
-      setCompressionType(mailData.compressionSettings.type || 'password');
+      setCompressionType(mailData.compressionSettings.type || 'none'); // デフォルトを'none'に変更
       setPasswordEmail(mailData.compressionSettings.passwordEmailTemplate || passwordEmail);
     }
   }, []);
@@ -372,7 +372,6 @@ const MailCompose = forwardRef(({
     
     // 送信確認ページに移動（スクロールは行わない - App.jsで処理）
     const passwordInput = document.getElementById('attachment-password');
-    const sendPasswordEmail = document.getElementById('send-password-email');
     
     onConfirm({
       ...mailData,
@@ -380,7 +379,7 @@ const MailCompose = forwardRef(({
       compressionSettings: {
         type: compressionType,
         password: compressionType === 'password' ? passwordInput?.value : null,
-        sendPasswordEmail: compressionType === 'password' ? sendPasswordEmail?.checked : false,
+        sendPasswordEmail: compressionType === 'password', // パスワード圧縮の場合は常にtrue
         passwordEmailTemplate: passwordEmail
       }
     });
@@ -1129,13 +1128,11 @@ const MailCompose = forwardRef(({
       .replace('<<名前>>', previewRecipient.name);
     
     // パスワード通知メールのプレビュー
-    const passwordEmailContent = mailData.compressionSettings && 
-                              mailData.compressionSettings.type === 'password' && 
-                              mailData.compressionSettings.sendPasswordEmail
+    const passwordEmailContent = compressionType === 'password'
                               ? passwordEmail
                                   .replace('<<会社名>>', previewRecipient.company)
                                   .replace('<<名前>>', previewRecipient.name)
-                                  .replace('<<パスワード>>', mailData.compressionSettings.password || 'a8Xp2Z')
+                                  .replace('<<パスワード>>', document.getElementById('attachment-password')?.value || 'a8Xp2Z')
                               : null;
     
     return (
@@ -1312,18 +1309,6 @@ const MailCompose = forwardRef(({
                 <div className="radio-option">
                   <input 
                     type="radio" 
-                    id="compress-password" 
-                    name="compression" 
-                    value="password"
-                    checked={compressionType === 'password'}
-                    onChange={handleCompressionChange}
-                    disabled={!hasAttachments}
-                  />
-                  <label htmlFor="compress-password">ZIP圧縮してパスワードを設定（推奨）</label>
-                </div>
-                <div className="radio-option">
-                  <input 
-                    type="radio" 
                     id="no-compress" 
                     name="compression" 
                     value="none"
@@ -1332,6 +1317,18 @@ const MailCompose = forwardRef(({
                     disabled={!hasAttachments}
                   />
                   <label htmlFor="no-compress">圧縮しない</label>
+                </div>
+                <div className="radio-option">
+                  <input 
+                    type="radio" 
+                    id="compress-password" 
+                    name="compression" 
+                    value="password"
+                    checked={compressionType === 'password'}
+                    onChange={handleCompressionChange}
+                    disabled={!hasAttachments}
+                  />
+                  <label htmlFor="compress-password">ZIP圧縮してパスワードを設定</label>
                 </div>
               </div>
               
@@ -1360,19 +1357,12 @@ const MailCompose = forwardRef(({
               <div className={`form-section ${compressionType !== 'password' || !hasAttachments ? 'disabled' : ''}`} style={{ marginTop: '10px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
-                    <input 
-                      type="checkbox" 
-                      id="send-password-email" 
-                      defaultChecked={mailData.compressionSettings?.sendPasswordEmail !== false}
-                      style={{ marginRight: '10px', width: 'auto' }}
-                      disabled={compressionType !== 'password' || !hasAttachments}
-                    />
-                    <label 
-                      htmlFor="send-password-email" 
-                      style={{ display: 'inline', marginBottom: 0 }}
-                    >
-                      パスワードを別メールで送信する
-                    </label>
+                    <span style={{ 
+                      fontSize: '14px', 
+                      color: compressionType === 'password' && hasAttachments ? '#333' : '#999'
+                    }}>
+                      ※ ZIP圧縮を選択した場合、パスワードを別メールで自動送信します
+                    </span>
                   </div>
                   <button 
                     className="password-template-btn"

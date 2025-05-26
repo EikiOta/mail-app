@@ -269,8 +269,7 @@ const ConfirmPage = ({
     if (!mailData.attachments || 
         mailData.attachments.length === 0 ||
         !mailData.compressionSettings || 
-        mailData.compressionSettings.type !== 'password' || 
-        !mailData.compressionSettings.sendPasswordEmail) {
+        mailData.compressionSettings.type !== 'password') {
       return null;
     }
     
@@ -315,9 +314,7 @@ const ConfirmPage = ({
     if (mailData.compressionSettings) {
       if (mailData.compressionSettings.type === 'password') {
         compressionSettingText = `ZIP圧縮してパスワードを設定（パスワード: ${mailData.compressionSettings.password}）`;
-        if (mailData.compressionSettings.sendPasswordEmail) {
-          compressionSettingText += '　※パスワードは別メールで送信されます';
-        }
+        compressionSettingText += '　※パスワードは別メールで送信されます';
       } else {
         compressionSettingText = '圧縮なし';
       }
@@ -588,8 +585,7 @@ const ConfirmPage = ({
   const hasPasswordEmail = mailData.attachments && 
                         mailData.attachments.length > 0 &&
                         mailData.compressionSettings && 
-                        mailData.compressionSettings.type === 'password' && 
-                        mailData.compressionSettings.sendPasswordEmail;
+                        mailData.compressionSettings.type === 'password';
 
   // パスワード通知メールのサンプル内容
   const passwordEmailSample = getPasswordEmailSample();
